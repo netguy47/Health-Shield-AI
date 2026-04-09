@@ -111,16 +111,16 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
                   position: 'absolute', 
                   top: '-12px', 
                   right: '24px', 
-                  background: tier.highlight ? 'var(--hs-primary)' : 'rgba(110, 216, 195, 0.15)',
-                  color: tier.highlight ? '#050505' : 'var(--hs-primary)',
-                  padding: '6px 14px',
-                  fontSize: '0.7rem',
+                  background: tier.highlight ? 'var(--hs-primary)' : 'rgba(110, 216, 195, 0.45)',
+                  color: tier.highlight ? '#050505' : '#e0f2f1',
+                  padding: '6px 16px',
+                  fontSize: '0.75rem',
                   fontWeight: 900,
                   borderRadius: '2px',
-                  border: tier.highlight ? 'none' : '1px solid rgba(110, 216, 195, 0.3)',
-                  boxShadow: tier.highlight ? '0 0 15px rgba(110, 216, 195, 0.4)' : 'none',
+                  border: tier.highlight ? 'none' : '1px solid rgba(110, 216, 195, 0.6)',
+                  boxShadow: '0 0 20px rgba(0,0,0,0.5)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.08em'
                 }}
               >
                 {tier.tag}
@@ -132,8 +132,8 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
                 {tier.name}
               </h3>
               <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '0.5rem' }}>
-                <span className="metric-value" style={{ fontSize: '2.5rem' }}>{tier.price}</span>
-                <span className="metric-unit" style={{ marginLeft: '4px' }}>{tier.period}</span>
+                <span className="metric-value" style={{ fontSize: '2.8rem', fontWeight: 900 }}>{tier.price}</span>
+                <span className="metric-unit" style={{ marginLeft: '6px', fontWeight: 800 }}>{tier.period}</span>
               </div>
               {tier.subtext && (
                 <p style={{ fontSize: '0.7rem', color: 'var(--hs-text-dim)', marginTop: '4px' }}>{tier.subtext}</p>
@@ -158,13 +158,14 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
               style={{ 
                 width: '100%', 
                 justifyContent: 'center', 
-                padding: '20px', 
-                background: tier.highlight ? 'var(--hs-primary)' : 'rgba(255,255,255,0.05)',
+                padding: '22px', 
+                background: tier.highlight ? 'var(--hs-primary)' : 'rgba(255,255,255,0.08)',
                 color: tier.highlight ? '#050505' : 'white',
-                border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.2)',
                 cursor: isPremium ? 'not-allowed' : 'pointer',
-                fontWeight: 800,
-                fontSize: '0.75rem'
+                fontWeight: 900,
+                fontSize: '0.85rem',
+                letterSpacing: '0.05em'
               }}
             >
               {isPremium ? 'STACK ACTIVE' : 'ACTIVATE NODE'}

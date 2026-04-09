@@ -28,6 +28,8 @@ import { calculateNeuralCardioScore } from './lib/oracle_engine';
 import { bufferLogOffline, getBufferedLogs, clearSyncBuffer } from './lib/offline_buffer';
 import { requestSovereignNotifications, triggerScheduledReminders } from './lib/notifications';
 
+const SOVEREIGN_VERSION = "v1.2.2";
+
 const App: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<'HUB' | 'DATA' | 'ENGINE' | 'SAFE' | 'CONSULTANT' | 'ORACLE'>('HUB');
@@ -38,6 +40,8 @@ const App: React.FC = () => {
   const [showSensor, setShowSensor] = useState(false);
 
   useEffect(() => {
+    console.log(`%c SOVEREIGN NODE: ${SOVEREIGN_VERSION} %c`, "background: #111; color: #00f2ff; font-weight: bold; border: 1px solid #00f2ff; padding: 2px 6px;", "");
+    
     // 1. Subscription & Protocol Verification
     const params = new URLSearchParams(window.location.search);
     const protocolOverride = params.get('protocol');
