@@ -3,18 +3,19 @@ import { db } from './firebase';
 import { collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Activity, 
-  Shield, 
-  Database, 
   Cpu, 
-  Lock, 
   Download, 
   ChevronRight, 
   Zap,
   TrendingUp,
   Heart,
-  Plus,
-  MessageSquare
+  Plus
 } from 'lucide-react';
+
+import SovereignHeader from './components/SovereignHeader';
+import NavigationDock from './components/NavigationDock';
+import PWAInstallOverlay from './components/PWAInstallOverlay';
+import MonetizationMatrix from './components/MonetizationMatrix';
 
 // Sovereign Components
 import OpticalSensor from './components/OpticalSensor';
@@ -115,11 +116,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handlePurchase = async () => {
+  const handlePurchase = async (plan: string) => {
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan })
       });
       if (!response.ok) throw new Error('Checkout initialization failed.');
       const { url } = await response.json();
@@ -142,17 +144,7 @@ const App: React.FC = () => {
 
   return (
     <div className="hs-app-container">
-      {/* Secure Header */}
-      <header className="hs-header">
-        <div className="hs-logo-container">
-          <Activity className="nav-icon" style={{ color: 'var(--hs-primary)' }} />
-          <h1 className="technical" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.1em' }}>HEALTHSHIELD <span style={{ color: 'var(--hs-primary)' }}>AI</span></h1>
-        </div>
-        <div className="hs-badge-secure">
-          <Lock size={12} />
-          <span>AES-256 SOVEREIGN</span>
-        </div>
-      </header>
+      <SovereignHeader />
 
       {/* Main Viewport */}
       <main className="hs-grid" style={{ marginTop: '1rem' }}>
@@ -225,26 +217,13 @@ const App: React.FC = () => {
             </section>
 
             {/* Feature Overlay / Premium Gate */}
-            {!isPremium && (
-              <section className="obsidian-card col-span-12" style={{ marginTop: '1rem', background: 'rgba(0, 242, 255, 0.03)', border: '1px solid rgba(0, 242, 255, 0.1)' }}>
-                <div className="hs-grid">
-                  <div className="col-span-12 pc-col-span-8">
-                    <h2 className="technical" style={{ color: '#00F2FF', marginBottom: '0.5rem' }}>AUTONOMOUS TRAJECTORY PROJECTION</h2>
-                    <p style={{ color: '#849495', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                      Unlock the Sovereign Archive to access 72-hour metabolic forecasting and cardiovascular entropy analysis.
-                    </p>
-                    <button 
-                      onClick={handlePurchase}
-                      className="hs-badge-secure" 
-                      style={{ background: '#00F2FF', color: '#050505', border: 'none', cursor: 'pointer', padding: '12px 20px', borderRadius: '8px' }}
-                    >
-                      <span>ACTIVATE SOVEREIGN ACCESS</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
+            {/* Features & Premium Incentives */}
+            <MonetizationMatrix 
+              isPremium={isPremium} 
+              handlePurchase={handlePurchase} 
+              handleInstall={handleInstall}
+              deferredPrompt={deferredPrompt}
+            />
 
             {/* Simple Stream View */}
             <section className="obsidian-card col-span-12" style={{ marginTop: '1rem' }}>
@@ -298,106 +277,21 @@ const App: React.FC = () => {
 
         {activeView === 'SAFE' && (
           <div className="col-span-12">
-            {!isPremium ? (
-              <div className="hs-grid">
-                {/* Free Tier */}
-                <div className="obsidian-card col-span-12 pc-col-span-6" style={{ height: 'fit-content' }}>
-                  <div className="hs-badge-secure" style={{ marginBottom: '1rem', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>BASIC ACCESS</div>
-                  <h3 className="technical" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>FREE</h3>
-                  <ul style={{ color: '#849495', fontSize: '0.8rem', paddingLeft: '1rem', marginBottom: '2rem' }}>
-                    <li style={{ marginBottom: '0.5rem' }}>Direct Biometric Capture</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Local Data Persistence</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Basic Staging Reports</li>
-                  </ul>
-                  <button className="hs-badge-secure" style={{ width: '100%', opacity: 0.5, cursor: 'not-allowed' }}>CURRENT PLAN</button>
-                </div>
-
-                {/* Sovereign Tier */}
-                <div className="obsidian-card col-span-12 pc-col-span-6" style={{ border: '1px solid var(--hs-primary)', background: 'rgba(110, 216, 195, 0.05)' }}>
-                  <div className="scan-line"></div>
-                  <div className="hs-badge-secure" style={{ marginBottom: '1rem', background: 'var(--hs-primary)', color: '#000' }}>SOVEREIGN ACCESS</div>
-                  <h3 className="technical" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>$199 / LIFETIME</h3>
-                  <ul style={{ color: 'var(--hs-text)', fontSize: '0.8rem', paddingLeft: '1rem', marginBottom: '2rem' }}>
-                    <li style={{ marginBottom: '0.5rem' }}>Autonomous Trajectory Projection (72hr)</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Sovereign Consultant Q&A Engine</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Cloud-Sync Encrypted Cold Storage</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Neural Cardio 0-100 Scoring</li>
-                    <li style={{ marginBottom: '0.5rem' }}>Priority Sentinel Heuristics</li>
-                  </ul>
-                  <button 
-                    onClick={handlePurchase}
-                    className="hs-badge-secure" 
-                    style={{ width: '100%', background: 'var(--hs-primary)', color: '#000', cursor: 'pointer' }}
-                  >
-                    ACTIVATE SOVEREIGN NODE
-                  </button>
-                </div>
-
-                {/* PWA Install Section */}
-                <div className="obsidian-card col-span-12" style={{ marginTop: '2rem', textAlign: 'center' }}>
-                    <Download size={32} style={{ color: 'var(--hs-primary)', marginBottom: '1rem' }} />
-                    <h4 className="technical">MOBILE INSTRUMENT MODE</h4>
-                    <p style={{ color: '#849495', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
-                      Install HealthShield AI as a standalone PWA for high-frequency optical sensor access and offline monitoring.
-                    </p>
-                    <button 
-                      onClick={handleInstall}
-                      className="hs-badge-secure"
-                      style={{ border: '1px solid var(--hs-primary)', color: 'var(--hs-primary)', cursor: 'pointer' }}
-                    >
-                      {deferredPrompt ? 'INSTALL TO HOME SCREEN' : 'PWA MODE READY (STAY TUNED)'}
-                    </button>
-                </div>
-              </div>
-            ) : (
-              <OracleHUD logs={logs} isPremium={isPremium} />
-            )}
+            <MonetizationMatrix 
+              isPremium={isPremium} 
+              handlePurchase={handlePurchase} 
+              handleInstall={handleInstall}
+              deferredPrompt={deferredPrompt}
+            />
           </div>
         )}
 
       </main>
 
-      {/* PWA Install Prompt */}
-      {deferredPrompt && (
-        <div style={{ position: 'fixed', bottom: '100px', left: '1.5rem', right: '1.5rem', zIndex: 1100 }}>
-          <div className="obsidian-card" style={{ background: '#00F2FF', color: '#050505', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Download size={20} />
-              <span className="technical" style={{ fontWeight: 700, fontSize: '0.8rem' }}>INSTALL SOVEREIGN HUB</span>
-            </div>
-            <button onClick={handleInstall} style={{ background: '#050505', color: '#FFF', border: 'none', padding: '8px 16px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>GET APP</button>
-          </div>
-        </div>
-      )}
+      <PWAInstallOverlay deferredPrompt={deferredPrompt} handleInstall={handleInstall} />
 
       {/* Sovereign Dock (Global Navigation) */}
-      <nav className="hs-dock-fixed">
-        <div className="hs-dock">
-          <button onClick={() => setActiveView('HUB')} className={`nav-item ${activeView === 'HUB' ? 'active' : ''}`}>
-            <Activity className="nav-icon" />
-            <span>HUB</span>
-          </button>
-          <button onClick={() => setActiveView('DATA')} className={`nav-item ${activeView === 'DATA' ? 'active' : ''}`}>
-            <Database className="nav-icon" />
-            <span>DATA</span>
-          </button>
-          <button onClick={() => setActiveView('CONSULTANT')} className={`nav-item ${activeView === 'CONSULTANT' ? 'active' : ''}`}>
-            <MessageSquare className="nav-icon" />
-            <span>ADVISOR</span>
-          </button>
-          <button 
-            onClick={() => isPremium ? setActiveView('ORACLE') : setActiveView('SAFE')} 
-            className={`nav-item ${activeView === 'ORACLE' ? 'active' : ''}`}
-          >
-            <Cpu className="nav-icon" />
-            <span>ORACLE</span>
-          </button>
-          <button onClick={() => setActiveView('SAFE')} className={`nav-item ${activeView === 'SAFE' ? 'active' : ''}`}>
-            <Shield className="nav-icon" />
-            <span>SAFE</span>
-          </button>
-        </div>
-      </nav>
+      <NavigationDock activeView={activeView} setActiveView={setActiveView} isPremium={isPremium} />
     </div>
   );
 };
