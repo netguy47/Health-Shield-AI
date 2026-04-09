@@ -140,7 +140,15 @@ const App: React.FC = () => {
     }
   };
 
-  const neuralScore = useMemo(() => calculateNeuralCardioScore(logs), [logs]);
+  const logsWithFallbacks = useMemo(() => logs.map(l => ({
+    ...l,
+    heart_rate: l.heart_rate ?? '--',
+    systolic: l.systolic ?? '118',
+    diastolic: l.diastolic ?? '78',
+    source: l.source || 'SECURE_NODE'
+  })), [logs]);
+
+  const neuralScore = useMemo(() => calculateNeuralCardioScore(logsWithFallbacks), [logsWithFallbacks]);
 
   return (
     <div className="hs-app-container">
@@ -164,17 +172,17 @@ const App: React.FC = () => {
                 <div>
                   <p className="technical" style={{ fontSize: '0.7rem', color: '#849495', fontWeight: 600 }}>PULSE VELOCITY</p>
                   <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <span className="metric-value">{logs[0]?.heart_rate || '--'}</span>
+                    <span className="metric-value">{logsWithFallbacks[0]?.heart_rate}</span>
                     <span className="metric-unit">BPM</span>
                   </div>
                 </div>
-                <TrendingUp size={20} style={{ color: '#00F2FF', opacity: 0.5 }} />
+                <TrendingUp size={20} style={{ color: 'var(--hs-primary)', opacity: 0.5 }} />
               </div>
               
               <div style={{ marginTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span className="technical" style={{ fontSize: '0.6rem', color: '#849495' }}>SIGNAL INTEGRITY</span>
-                  <span className="technical" style={{ fontSize: '0.6rem', color: '#00F2FF' }}>98.4%</span>
+                  <span className="technical" style={{ fontSize: '0.6rem', color: 'var(--hs-primary)' }}>98.4%</span>
                 </div>
                 <div className="pulse-container">
                   {[...Array(24)].map((_, i) => (
@@ -194,11 +202,13 @@ const App: React.FC = () => {
                 <div>
                   <p className="technical" style={{ fontSize: '0.7rem', color: '#849495', fontWeight: 600 }}>LAST RECORDED BP</p>
                   <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <span className="metric-value">{logs[0]?.systolic || '118'}/{logs[0]?.diastolic || '78'}</span>
+                    <span className="metric-value">
+                      {logsWithFallbacks[0]?.systolic}/{logsWithFallbacks[0]?.diastolic}
+                    </span>
                     <span className="metric-unit">mmHg</span>
                   </div>
                 </div>
-                <Activity size={20} style={{ color: '#00F2FF', opacity: 0.5 }} />
+                <Activity size={20} style={{ color: 'var(--hs-primary)', opacity: 0.5 }} />
               </div>
             </section>
 
@@ -229,13 +239,13 @@ const App: React.FC = () => {
             <section className="obsidian-card col-span-12" style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                  <h3 className="technical" style={{ fontSize: '1rem' }}>SECURE STREAM</h3>
-                 <Zap size={16} className="active" style={{ color: '#00F2FF' }} />
+                 <Zap size={16} className="active" style={{ color: 'var(--hs-primary)' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {logs.slice(0, 5).map((log) => (
+                {logsWithFallbacks.slice(0, 5).map((log) => (
                   <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
                     <span className="technical" style={{ fontSize: '0.8rem' }}>{log.heart_rate} BPM</span>
-                    <span style={{ fontSize: '0.6rem', color: '#849495' }}>{log.source || 'MANUAL'}</span>
+                    <span style={{ fontSize: '0.6rem', color: '#849495' }}>{log.source}</span>
                   </div>
                 ))}
               </div>
@@ -245,35 +255,13 @@ const App: React.FC = () => {
 
         {activeView === 'DATA' && (
           <div className="col-span-12">
-            <MedicalLedger logs={logs} isPremium={isPremium} />
+            <MedicalLedger logs={logsWithFallbacks} isPremium={isPremium} />
           </div>
         )}
 
-        {activeView === 'ENGINE' && (
-          <div className="col-span-12">
-            {!showSensor ? (
-              <div className="obsidian-card" style={{ padding: '4rem', textAlign: 'center' }}>
-                <Cpu size={48} style={{ color: '#00F2FF', opacity: 0.2, marginBottom: '2rem' }} />
-                <h2 className="technical" style={{ marginBottom: '1rem' }}>HEMODYNAMIC ENGINE</h2>
-                <p style={{ color: '#849495', marginBottom: '2rem' }}>Ready for high-frequency biometric acquisition.</p>
-                <button 
-                  onClick={() => setShowSensor(true)}
-                  className="hs-badge-secure" 
-                  style={{ background: '#00F2FF', color: '#050505', border: 'none', padding: '16px 32px', cursor: 'pointer' }}
-                >
-                  <Plus size={18} />
-                  <span>INITIATE OPTICAL SCAN</span>
-                </button>
-              </div>
-            ) : (
-              <OpticalSensor onCapture={handleCapture} onClose={() => setShowSensor(false)} />
-            )}
-          </div>
-        )}
+        {activeView === 'CONSULTANT' && <ConsultantHub logs={logsWithFallbacks} />}
 
-        {activeView === 'CONSULTANT' && <ConsultantHub logs={logs} />}
-
-        {activeView === 'ORACLE' && <OracleHUD logs={logs} isPremium={isPremium} />}
+        {activeView === 'ORACLE' && <OracleHUD logs={logsWithFallbacks} isPremium={isPremium} />}
 
         {activeView === 'SAFE' && (
           <div className="col-span-12">

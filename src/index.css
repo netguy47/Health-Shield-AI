@@ -14,7 +14,25 @@
   /* Layout */
   --hs-container-max: 1200px;
   --hs-radius: 12px;
+  --hs-radius-lg: 24px;
   --hs-blur: 24px;
+
+  /* Elevation */
+  --hs-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --hs-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --hs-shadow-premium: 0 0 40px rgba(110, 216, 195, 0.15), inset 0 0 20px rgba(110, 216, 195, 0.05);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 * {
@@ -248,6 +266,197 @@ h1, h2, h3, .technical {
 
 .nav-item.active .nav-icon {
   filter: drop-shadow(0 0 5px var(--hs-primary));
+}
+
+/* --- Pricing Matrix --- */
+
+.monetization-section {
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.pricing-header {
+  margin-bottom: 4rem;
+}
+
+.pricing-title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(to bottom, #fff, var(--hs-text-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pricing-subtitle {
+  color: var(--hs-text-dim);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+  align-items: stretch;
+}
+
+.pricing-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  height: 100%;
+  border: 1px solid rgba(110, 216, 195, 0.1);
+  background: linear-gradient(180deg, rgba(10, 10, 11, 0.8) 0%, rgba(5, 5, 5, 0.9) 100%);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.pricing-card.premium {
+  border-color: rgba(110, 216, 195, 0.3);
+  box-shadow: var(--hs-shadow-premium);
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+.pricing-card.premium::after {
+  content: "MOST POPULAR";
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--hs-primary);
+  color: var(--hs-bg);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.1em;
+}
+
+.card-header {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(110, 216, 195, 0.05);
+}
+
+.tier-name {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--hs-text-dim);
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.price-container {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.price-value {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--hs-primary);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.price-period {
+  color: var(--hs-text-dim);
+}
+
+.feature-list {
+  padding: 2rem;
+  flex-grow: 1;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--hs-text);
+  font-size: 0.95rem;
+}
+
+.feature-icon {
+  color: var(--hs-primary);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.feature-item.disabled {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.card-footer {
+  padding: 2rem;
+}
+
+/* --- Premium Buttons --- */
+
+.hs-btn-primary {
+  width: 100%;
+  background: var(--hs-primary);
+  color: var(--hs-bg);
+  border: none;
+  padding: 1.25rem;
+  border-radius: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hs-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(110, 216, 195, 0.3);
+  filter: brightness(1.1);
+}
+
+.hs-btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: var(--hs-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.25rem;
+  border-radius: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hs-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.trust-signals {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  opacity: 0.6;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* --- Responsive Adaptations --- */

@@ -34,7 +34,12 @@ export default async function handler(req, res) {
       });
       res.status(200).json({ url: session.url });
     } catch (err) {
-      res.status(err.statusCode || 500).json(err.message);
+      console.error('Stripe Checkout Error:', err);
+      res.status(err.statusCode || 500).json({ 
+        error: err.message, 
+        code: err.code,
+        message: 'Secure Checkout Failed. Please ensure your payment method is valid.'
+      });
     }
   } else {
     res.setHeader('Allow', 'POST');
