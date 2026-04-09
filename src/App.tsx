@@ -20,6 +20,7 @@ import OpticalSensor from './components/OpticalSensor';
 import MedicalLedger from './components/MedicalLedger';
 import OracleHUD from './components/OracleHUD';
 import ScoreGauge from './components/ScoreGauge';
+import ConsultantHub from './components/ConsultantHub';
 import { maskLogData, unmaskLogData } from './lib/encryption';
 import { calculateNeuralCardioScore } from './lib/oracle_engine';
 import { bufferLogOffline, getBufferedLogs, clearSyncBuffer } from './lib/offline_buffer';
@@ -27,7 +28,7 @@ import { requestSovereignNotifications, triggerScheduledReminders } from './lib/
 
 const App: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
-  const [activeView, setActiveView] = useState<'HUB' | 'DATA' | 'ENGINE' | 'SAFE'>('HUB');
+  const [activeView, setActiveView] = useState<'HUB' | 'DATA' | 'ENGINE' | 'SAFE' | 'CONSULTANT' | 'ORACLE'>('HUB');
   const [isPremium, setIsPremium] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showSensor, setShowSensor] = useState(false);
@@ -290,6 +291,10 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {activeView === 'CONSULTANT' && <ConsultantHub logs={logs} />}
+
+        {activeView === 'ORACLE' && <OracleHUD logs={logs} isPremium={isPremium} />}
+
         {activeView === 'SAFE' && (
           <div className="col-span-12">
             {!isPremium ? (
@@ -340,9 +345,16 @@ const App: React.FC = () => {
             <Database className="nav-icon" />
             <span>DATA</span>
           </button>
-          <button onClick={() => setActiveView('ENGINE')} className={`nav-item ${activeView === 'ENGINE' ? 'active' : ''}`}>
+          <button onClick={() => setActiveView('CONSULTANT')} className={`nav-item ${activeView === 'CONSULTANT' ? 'active' : ''}`}>
+            <MessageSquare className="nav-icon" />
+            <span>ADVISOR</span>
+          </button>
+          <button 
+            onClick={() => isPremium ? setActiveView('ORACLE') : setShowPremiumVault(true)} 
+            className={`nav-item ${activeView === 'ORACLE' ? 'active' : ''}`}
+          >
             <Cpu className="nav-icon" />
-            <span>ENGINE</span>
+            <span>ORACLE</span>
           </button>
           <button onClick={() => setActiveView('SAFE')} className={`nav-item ${activeView === 'SAFE' ? 'active' : ''}`}>
             <Shield className="nav-icon" />
