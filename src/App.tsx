@@ -12,7 +12,8 @@ import {
   Zap,
   TrendingUp,
   Heart,
-  Plus
+  Plus,
+  MessageSquare
 } from 'lucide-react';
 
 // Sovereign Components
@@ -298,20 +299,55 @@ const App: React.FC = () => {
         {activeView === 'SAFE' && (
           <div className="col-span-12">
             {!isPremium ? (
-               <div className="obsidian-card vault-lock-container" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                <div className="scan-line"></div>
-                <Lock size={48} style={{ color: '#00F2FF', marginBottom: '1.5rem', opacity: 0.8 }} />
-                <h2 className="technical" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>SOVEREIGN ORACLE: LOCKED</h2>
-                <p style={{ color: '#849495', maxWidth: '500px', margin: '0 auto 2rem' }}>
-                  The heuristic sentinel requires Sovereign Node activation to process your hemodynamic trajectories and provide clinical trend analysis.
-                </p>
-                <button 
-                  onClick={handlePurchase}
-                  className="hs-badge-secure"
-                  style={{ background: '#00F2FF', color: '#050505', border: 'none', cursor: 'pointer', padding: '14px 32px', margin: '0 auto', fontSize: '0.8rem' }}
-                >
-                  ACTIVATE SENTINEL — $199
-                </button>
+              <div className="hs-grid">
+                {/* Free Tier */}
+                <div className="obsidian-card col-span-12 pc-col-span-6" style={{ height: 'fit-content' }}>
+                  <div className="hs-badge-secure" style={{ marginBottom: '1rem', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>BASIC ACCESS</div>
+                  <h3 className="technical" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>FREE</h3>
+                  <ul style={{ color: '#849495', fontSize: '0.8rem', paddingLeft: '1rem', marginBottom: '2rem' }}>
+                    <li style={{ marginBottom: '0.5rem' }}>Direct Biometric Capture</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Local Data Persistence</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Basic Staging Reports</li>
+                  </ul>
+                  <button className="hs-badge-secure" style={{ width: '100%', opacity: 0.5, cursor: 'not-allowed' }}>CURRENT PLAN</button>
+                </div>
+
+                {/* Sovereign Tier */}
+                <div className="obsidian-card col-span-12 pc-col-span-6" style={{ border: '1px solid var(--hs-primary)', background: 'rgba(110, 216, 195, 0.05)' }}>
+                  <div className="scan-line"></div>
+                  <div className="hs-badge-secure" style={{ marginBottom: '1rem', background: 'var(--hs-primary)', color: '#000' }}>SOVEREIGN ACCESS</div>
+                  <h3 className="technical" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>$199 / LIFETIME</h3>
+                  <ul style={{ color: 'var(--hs-text)', fontSize: '0.8rem', paddingLeft: '1rem', marginBottom: '2rem' }}>
+                    <li style={{ marginBottom: '0.5rem' }}>Autonomous Trajectory Projection (72hr)</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Sovereign Consultant Q&A Engine</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Cloud-Sync Encrypted Cold Storage</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Neural Cardio 0-100 Scoring</li>
+                    <li style={{ marginBottom: '0.5rem' }}>Priority Sentinel Heuristics</li>
+                  </ul>
+                  <button 
+                    onClick={handlePurchase}
+                    className="hs-badge-secure" 
+                    style={{ width: '100%', background: 'var(--hs-primary)', color: '#000', cursor: 'pointer' }}
+                  >
+                    ACTIVATE SOVEREIGN NODE
+                  </button>
+                </div>
+
+                {/* PWA Install Section */}
+                <div className="obsidian-card col-span-12" style={{ marginTop: '2rem', textAlign: 'center' }}>
+                    <Download size={32} style={{ color: 'var(--hs-primary)', marginBottom: '1rem' }} />
+                    <h4 className="technical">MOBILE INSTRUMENT MODE</h4>
+                    <p style={{ color: '#849495', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+                      Install HealthShield AI as a standalone PWA for high-frequency optical sensor access and offline monitoring.
+                    </p>
+                    <button 
+                      onClick={handleInstall}
+                      className="hs-badge-secure"
+                      style={{ border: '1px solid var(--hs-primary)', color: 'var(--hs-primary)', cursor: 'pointer' }}
+                    >
+                      {deferredPrompt ? 'INSTALL TO HOME SCREEN' : 'PWA MODE READY (STAY TUNED)'}
+                    </button>
+                </div>
               </div>
             ) : (
               <OracleHUD logs={logs} isPremium={isPremium} />
@@ -350,7 +386,7 @@ const App: React.FC = () => {
             <span>ADVISOR</span>
           </button>
           <button 
-            onClick={() => isPremium ? setActiveView('ORACLE') : setShowPremiumVault(true)} 
+            onClick={() => isPremium ? setActiveView('ORACLE') : setActiveView('SAFE')} 
             className={`nav-item ${activeView === 'ORACLE' ? 'active' : ''}`}
           >
             <Cpu className="nav-icon" />
