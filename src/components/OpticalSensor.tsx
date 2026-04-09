@@ -13,6 +13,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   const [bpm, setBpm] = useState<number | null>(null);
   const [confidence, setConfidence] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isLowSignal, setIsLowSignal] = useState(false);
 
   // PPG Algorithm State
   const dataPoints = useRef<number[]>([]);
@@ -82,8 +83,14 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       }
       const avgR = rSum / (data.length / 4);
 
-      // Simple Peak Detection
-      handleDataPoint(avgR);
+      // Hardening: Signal Validity Check
+      // If Red channel is very low, the finger isn't over the flash
+      if (avgR < 150) { 
+        setIsLowSignal(true);
+      } else {
+        setIsLowSignal(false);
+        handleDataPoint(avgR);
+      }
 
       requestAnimationFrame(analyze);
     };
@@ -153,8 +160,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         </div>
       </div>
 
-      <p style={{ fontSize: '0.7rem', color: '#849495', marginTop: '1.5rem', lineHeight: 1.6 }}>
-        {error || "Place your index finger firmly over the camera lens and flash sensor. Keep steady while the Sentinel acquires your hemodynamic pulse wave."}
+      <p style={{ fontSize: '0.7rem', color: isLowSignal ? '#FF5050' : '#849495', marginTop: '1.5rem', lineHeight: 1.6 }}>
+        {error || (isLowSignal ? "SIGNAL LOST: Ensure your finger completely covers the camera lens and flash sensor." : "Place your index finger firmly over the camera lens and flash sensor. Keep steady while the Sentinel acquires your hemodynamic pulse wave.")}
       </p>
 
       {error && (

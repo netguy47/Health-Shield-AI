@@ -11,6 +11,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
+      manifestFilename: 'manifest.webmanifest',
       manifest: {
         name: 'HealthShield AI: The Sovereign Archive',
         short_name: 'HealthShield',

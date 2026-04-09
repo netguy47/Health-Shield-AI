@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { unmaskLogData, encryptSovereignData } from '../lib/encryption';
-import { Edit3, Check, X, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Edit3, Check, X, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface MedicalLedgerProps {
   logs: any[];
@@ -12,6 +12,7 @@ interface MedicalLedgerProps {
 const MedicalLedger: React.FC<MedicalLedgerProps> = ({ logs, isPremium }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleEdit = (log: any) => {
     setEditingId(log.id);
@@ -23,6 +24,7 @@ const MedicalLedger: React.FC<MedicalLedgerProps> = ({ logs, isPremium }) => {
   };
 
   const handleSave = async (id: string) => {
+    setIsSaving(true);
     try {
       const logRef = doc(db, 'health_logs', id);
       
@@ -36,10 +38,14 @@ const MedicalLedger: React.FC<MedicalLedgerProps> = ({ logs, isPremium }) => {
       };
 
       await updateDoc(logRef, encryptedUpdate);
+      
+      // Update local state if needed (though logs prop should update from parent)
       setEditingId(null);
     } catch (error) {
       console.error('Update Failed:', error);
       alert('Sovereign node rejected update. Verify connection.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -108,8 +114,14 @@ const MedicalLedger: React.FC<MedicalLedgerProps> = ({ logs, isPremium }) => {
                   <td style={{ padding: '16px 0' }}>
                     {isEditing ? (
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <Check size={14} style={{ cursor: 'pointer', color: '#00F2FF' }} onClick={() => handleSave(log.id)} />
-                        <X size={14} style={{ cursor: 'pointer', color: '#FF5050' }} onClick={() => setEditingId(null)} />
+                        {isSaving ? (
+                          <RefreshCw size={14} className="spin" style={{ color: '#00F2FF' }} />
+                        ) : (
+                          <>
+                            <Check size={14} style={{ cursor: 'pointer', color: '#00F2FF' }} onClick={() => handleSave(log.id)} />
+                            <X size={14} style={{ cursor: 'pointer', color: '#FF5050' }} onClick={() => setEditingId(null)} />
+                          </>
+                        )}
                       </div>
                     ) : (
                       <Edit3 size={14} style={{ cursor: 'pointer', color: '#849495' }} onClick={() => handleEdit(log)} />

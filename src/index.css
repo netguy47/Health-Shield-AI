@@ -146,6 +146,15 @@ h1, h2, h3, .technical {
   50% { opacity: 1; }
 }
 
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* --- Premium Vault Effects --- */
 
 .vault-lock-container {
@@ -474,6 +483,7 @@ h1, h2, h3, .technical {
 /* PC */
 @media (min-width: 1024px) {
   .pc-col-span-4 { grid-column: span 4; }
+  .pc-col-span-6 { grid-column: span 6; }
   .pc-col-span-8 { grid-column: span 8; }
   .hs-app-container { padding: 4rem 1.5rem; }
 }
