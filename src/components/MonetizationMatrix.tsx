@@ -3,14 +3,18 @@ import { ShieldCheck, Zap, Download, Lock, CheckCircle2 as CheckIcon, TrendingUp
 
 interface MonetizationMatrixProps {
   isPremium: boolean;
+  subscriptionTier: string;
   handlePurchase: (priceId: string) => void;
+  handleStartTrial: () => void;
   handleInstall: () => void;
   deferredPrompt: any;
 }
 
 const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({ 
   isPremium, 
+  subscriptionTier,
   handlePurchase, 
+  handleStartTrial,
   handleInstall, 
   deferredPrompt 
 }) => {
@@ -165,6 +169,27 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
             >
               {isPremium ? 'STACK ACTIVE' : 'ACTIVATE NODE'}
             </button>
+
+            {tier.highlight && !isPremium && (
+              <button 
+                onClick={handleStartTrial}
+                className="technical"
+                style={{ 
+                  marginTop: '1rem', 
+                  width: '100%', 
+                  background: 'transparent', 
+                  color: 'var(--hs-primary)', 
+                  border: '1px solid rgba(110, 216, 195, 0.3)',
+                  padding: '10px',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  borderRadius: '2px'
+                }}
+              >
+                START 14-DAY SOVEREIGN TRIAL
+              </button>
+            )}
           </div>
         ))}
       </div>

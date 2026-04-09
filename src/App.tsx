@@ -31,20 +31,49 @@ import { requestSovereignNotifications, triggerScheduledReminders } from './lib/
 const App: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<'HUB' | 'DATA' | 'ENGINE' | 'SAFE' | 'CONSULTANT' | 'ORACLE'>('HUB');
-  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'pro' | 'yearly' | 'lifetime'>('free');
+  const isPremium = useMemo(() => subscriptionTier !== 'free', [subscriptionTier]);
+  const [trialTimeRemaining, setTrialTimeRemaining] = useState<number | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showSensor, setShowSensor] = useState(false);
 
   useEffect(() => {
-    // 1. Success verification from URL
+    // 1. Subscription & Protocol Verification
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true') {
-      setIsPremium(true);
-      localStorage.setItem('healthshield_sovereign_node', 'active');
+    const protocolOverride = params.get('protocol');
+    
+    // Developer Overrides (Local-only persistence)
+    if (protocolOverride && ['pro', 'yearly', 'lifetime', 'free'].includes(protocolOverride)) {
+      setSubscriptionTier(protocolOverride as any);
+      localStorage.setItem('healthshield_protocol_level', protocolOverride);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-      const savedNode = localStorage.getItem('healthshield_sovereign_node');
-      if (savedNode === 'active') setIsPremium(true);
+      const savedProtocol = localStorage.getItem('healthshield_protocol_level');
+      const checkoutSuccess = params.get('success') === 'true';
+      
+      if (checkoutSuccess) {
+        setSubscriptionTier('pro');
+        localStorage.setItem('healthshield_protocol_level', 'pro');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (savedProtocol) {
+        setSubscriptionTier(savedProtocol as any);
+      }
+    }
+
+    // 1b. Trial Logic (Sovereign 14-day)
+    const trialStart = localStorage.getItem('healthshield_trial_start');
+    if (trialStart && subscriptionTier === 'free') {
+      const startTime = parseInt(trialStart, 10);
+      const now = Date.now();
+      const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+      const elapsed = now - startTime;
+      
+      if (elapsed < fourteenDays) {
+        setSubscriptionTier('pro'); // Unlock Pro features during trial
+        setTrialTimeRemaining(Math.ceil((fourteenDays - elapsed) / (1000 * 60 * 60 * 24)));
+      } else {
+        localStorage.removeItem('healthshield_trial_start');
+      }
     }
 
     // 2. Firebase Sync (Encrypted Stream)
@@ -89,7 +118,15 @@ const App: React.FC = () => {
     initSovereign();
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, subscriptionTier]);
+
+  const handleStartTrial = () => {
+    const now = Date.now().toString();
+    localStorage.setItem('healthshield_trial_start', now);
+    setSubscriptionTier('pro');
+    setTrialTimeRemaining(14);
+    if (activeView === 'SAFE') setActiveView('ORACLE');
+  };
 
   const handleCapture = async (bpm: number) => {
     try {
@@ -152,7 +189,7 @@ const App: React.FC = () => {
 
   return (
     <div className="hs-app-container">
-      <SovereignHeader />
+      <SovereignHeader subscriptionTier={subscriptionTier} trialDaysRemaining={trialTimeRemaining} />
 
       {/* Main Viewport */}
       <main className="hs-grid" style={{ marginTop: '1rem' }}>
@@ -231,7 +268,9 @@ const App: React.FC = () => {
             <section className="col-span-12" style={{ marginTop: '6rem', padding: '4rem 0', borderTop: '1px solid rgba(110, 216, 195, 0.1)' }}>
               <MonetizationMatrix 
                 isPremium={isPremium} 
+                subscriptionTier={subscriptionTier}
                 handlePurchase={handlePurchase} 
+                handleStartTrial={handleStartTrial}
                 handleInstall={handleInstall}
                 deferredPrompt={deferredPrompt}
               />
@@ -269,7 +308,9 @@ const App: React.FC = () => {
           <div className="col-span-12">
             <MonetizationMatrix 
               isPremium={isPremium} 
+              subscriptionTier={subscriptionTier}
               handlePurchase={handlePurchase} 
+              handleStartTrial={handleStartTrial}
               handleInstall={handleInstall}
               deferredPrompt={deferredPrompt}
             />

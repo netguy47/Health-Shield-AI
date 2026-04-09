@@ -293,6 +293,7 @@ h1, h2, h3, .technical {
   margin-bottom: 1rem;
   background: linear-gradient(to bottom, #fff, var(--hs-text-dim));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

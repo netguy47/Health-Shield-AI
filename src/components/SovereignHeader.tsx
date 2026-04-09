@@ -1,7 +1,14 @@
 import React from 'react';
 import { Activity, Lock } from 'lucide-react';
 
-const SovereignHeader: React.FC = () => {
+interface SovereignHeaderProps {
+  subscriptionTier: string;
+  trialDaysRemaining: number | null;
+}
+
+const SovereignHeader: React.FC<SovereignHeaderProps> = ({ subscriptionTier, trialDaysRemaining }) => {
+  const isTrial = trialDaysRemaining !== null;
+  
   return (
     <header className="hs-header">
       <div className="hs-logo-container">
@@ -10,9 +17,18 @@ const SovereignHeader: React.FC = () => {
           HEALTHSHIELD <span style={{ color: 'var(--hs-primary)' }}>AI</span>
         </h1>
       </div>
-      <div className="hs-badge-secure">
-        <Lock size={12} />
-        <span>AES-256 SOVEREIGN</span>
+      
+      <div style={{ display: 'flex', gap: '10px' }}>
+        {isTrial && (
+          <div className="hs-badge-secure" style={{ background: 'rgba(255, 107, 107, 0.1)', color: '#ff6b6b', borderColor: 'rgba(255, 107, 107, 0.3)' }}>
+            <span style={{ fontSize: '0.6rem', fontWeight: 900 }}>TRIAL: {trialDaysRemaining}D</span>
+          </div>
+        )}
+        
+        <div className="hs-badge-secure">
+          <Lock size={12} />
+          <span>{subscriptionTier === 'lifetime' ? 'LIFETIME SOVEREIGN' : 'AES-256 SOVEREIGN'}</span>
+        </div>
       </div>
     </header>
   );
