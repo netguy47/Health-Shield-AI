@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { generateSentinelInsight, HealthLog, classifyBP } from '../lib/oracle_engine';
 import { Cpu, Zap, Activity, ShieldCheck, Download, AlertTriangle, TrendingUp } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
 import TrajectoryGraph from './TrajectoryGraph';
 
 interface OracleHUDProps {
@@ -79,35 +80,37 @@ const OracleHUD: React.FC<OracleHUDProps> = ({ logs, isPremium }) => {
 
       {/* 3. Global Control Node */}
       <section className="obsidian-card col-span-12" style={{ background: 'rgba(0, 242, 255, 0.02)' }}>
-        <div className="hs-grid">
-          <div className="col-span-12 pc-col-span-8">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1rem' }}>
-              <ShieldCheck size={24} style={{ color: '#00F2FF' }} />
-              <h3 className="technical">SOVEREIGN HEALTH REPORT</h3>
+        <Dialog.Root>
+          <div className="hs-grid">
+            <div className="col-span-12 pc-col-span-8">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1rem' }}>
+                <ShieldCheck size={24} style={{ color: '#00F2FF' }} />
+                <Dialog.Title className="technical">SOVEREIGN HEALTH REPORT</Dialog.Title>
+              </div>
+              <Dialog.Description style={{ color: '#849495', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+                Generate a high-fidelity clinical summary of your hemodynamic trajectories. All data is unmasked locally for the report and remains 100% private to your device.
+              </Dialog.Description>
+              <button 
+                onClick={downloadReport}
+                className="hs-badge-secure" 
+                style={{ background: '#00F2FF', color: '#050505', border: 'none', cursor: 'pointer', padding: '12px 24px', fontWeight: 700 }}
+              >
+                <Download size={16} />
+                <span>GENERATE CLINICAL ARCHIVE</span>
+              </button>
             </div>
-            <p style={{ color: '#849495', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
-              Generate a high-fidelity clinical summary of your hemodynamic trajectories. All data is unmasked locally for the report and remains 100% private to your device.
-            </p>
-            <button 
-              onClick={downloadReport}
-              className="hs-badge-secure" 
-              style={{ background: '#00F2FF', color: '#050505', border: 'none', cursor: 'pointer', padding: '12px 24px', fontWeight: 700 }}
-            >
-              <Download size={16} />
-              <span>GENERATE CLINICAL ARCHIVE</span>
-            </button>
+            
+            <div className="col-span-12 pc-col-span-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <div style={{ textAlign: 'center', border: '1px dashed rgba(255, 255, 255, 0.1)', padding: '1.5rem', borderRadius: '8px', width: '100%' }}>
+                  <AlertTriangle size={20} style={{ color: '#FFB800', marginBottom: '8px' }} />
+                  <p className="technical" style={{ fontSize: '0.5rem', color: '#849495', lineHeight: 1.4 }}>
+                    GENERAL WELLNESS DISCLAIMER:<br/>
+                    Sentinel Oracle provides hemodynamic trend analysis for wellness tracking. This is not a diagnostic device. Consult a physician for clinical decisions.
+                  </p>
+               </div>
+            </div>
           </div>
-          
-          <div className="col-span-12 pc-col-span-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <div style={{ textAlign: 'center', border: '1px dashed rgba(255, 255, 255, 0.1)', padding: '1.5rem', borderRadius: '8px', width: '100%' }}>
-                <AlertTriangle size={20} style={{ color: '#FFB800', marginBottom: '8px' }} />
-                <p className="technical" style={{ fontSize: '0.5rem', color: '#849495', lineHeight: 1.4 }}>
-                  GENERAL WELLNESS DISCLAIMER:<br/>
-                  Sentinel Oracle provides hemodynamic trend analysis for wellness tracking. This is not a diagnostic device. Consult a physician for clinical decisions.
-                </p>
-             </div>
-          </div>
-        </div>
+        </Dialog.Root>
       </section>
     </div>
   );

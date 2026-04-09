@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Zap, Download, Lock, CheckCircle2, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Zap, Download, Lock, CheckCircle2 as CheckIcon, TrendingUp } from 'lucide-react';
 
 interface MonetizationMatrixProps {
   isPremium: boolean;
@@ -127,7 +127,7 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {tier.features.map((feature, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '0.8rem', color: '#B0BEC5' }}>
-                    <CheckCircle2 size={14} style={{ color: 'var(--hs-primary)', flexShrink: 0 }} />
+                    <CheckIcon size={14} style={{ color: 'var(--hs-primary)', flexShrink: 0 }} />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -208,8 +208,8 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
   );
 };
 
-// Internal icon for checkmarks
-const CheckCircle2 = ({ size, style }: { size: number, style?: React.CSSProperties }) => (
+// Internal icon for checkmarks (fallback if needed or for custom styling)
+const CheckCircleLocal = ({ size, style }: { size: number, style?: React.CSSProperties }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     width={size} 
