@@ -1,6 +1,7 @@
+import React, { useMemo, useState } from 'react';
 import { generateSentinelInsight, HealthLog, classifyBP, calculateDrift } from '../lib/oracle_engine';
 import { querySovereignConsultant, AdviceNode } from '../lib/consultant_engine';
-import { Cpu, Zap, Activity, ShieldCheck, Download, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Cpu, Zap, Activity, ShieldCheck, Download, AlertTriangle, TrendingUp, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import TrajectoryGraph from './TrajectoryGraph';
 
@@ -16,7 +17,7 @@ const OracleHUD: React.FC<OracleHUDProps> = ({ logs, isPremium }) => {
   const insight = useMemo(() => generateSentinelInsight(logs), [logs]);
   const classification = latestLog ? classifyBP(latestLog.systolic || 120, latestLog.diastolic || 80) : 'UNKNOWN';
 
-  const [consultNode, setConsultNode] = React.useState<AdviceNode | null>(null);
+  const [consultNode, setConsultNode] = useState<AdviceNode | null>(null);
 
   const handleConsult = (type: string) => {
     const advice = querySovereignConsultant(type, logs);
