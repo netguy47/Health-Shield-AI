@@ -85,7 +85,7 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
       </section>
 
       {/* Pricing Grid */}
-      <div className="col-span-12 hs-grid" style={{ gap: '2rem', alignItems: 'stretch' }}>
+      <div className="col-span-12 hs-grid" style={{ gap: '3rem', alignItems: 'stretch', marginTop: '2rem' }}>
         {tiers.map((tier) => (
           <div 
             key={tier.id}
@@ -105,14 +105,18 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
                 className="technical" 
                 style={{ 
                   position: 'absolute', 
-                  top: '-10px', 
-                  right: '20px', 
-                  background: tier.highlight ? 'var(--hs-primary)' : 'rgba(255,255,255,0.1)',
-                  color: tier.highlight ? '#050505' : 'white',
-                  padding: '4px 10px',
-                  fontSize: '0.6rem',
-                  fontWeight: 700,
-                  borderRadius: '2px'
+                  top: '-12px', 
+                  right: '24px', 
+                  background: tier.highlight ? 'var(--hs-primary)' : 'rgba(110, 216, 195, 0.15)',
+                  color: tier.highlight ? '#050505' : 'var(--hs-primary)',
+                  padding: '6px 14px',
+                  fontSize: '0.7rem',
+                  fontWeight: 900,
+                  borderRadius: '2px',
+                  border: tier.highlight ? 'none' : '1px solid rgba(110, 216, 195, 0.3)',
+                  boxShadow: tier.highlight ? '0 0 15px rgba(110, 216, 195, 0.4)' : 'none',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
                 }}
               >
                 {tier.tag}

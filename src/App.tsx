@@ -228,7 +228,7 @@ const App: React.FC = () => {
 
             {/* Feature Overlay / Premium Gate */}
             {/* Features & Premium Incentives */}
-            <section className="col-span-12" style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid rgba(110, 216, 195, 0.1)' }}>
+            <section className="col-span-12" style={{ marginTop: '6rem', padding: '4rem 0', borderTop: '1px solid rgba(110, 216, 195, 0.1)' }}>
               <MonetizationMatrix 
                 isPremium={isPremium} 
                 handlePurchase={handlePurchase} 
