@@ -63,20 +63,29 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
   ];
 
   return (
-    <div className="hs-grid" style={{ gap: '2rem' }}>
-      {/* Header Section */}
-      <section className="col-span-12" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h2 className="technical" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+    <section style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Background Sovereign Vault Effect */}
+      <div style={{ 
+        position: 'absolute', 
+        inset: 0, 
+        background: 'radial-gradient(circle at 50% 0%, rgba(110, 216, 195, 0.05) 0%, transparent 70%)',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+      
+      <div className="hs-grid" style={{ gap: '3rem', position: 'relative', zIndex: 1 }}>
+      <section className="col-span-12" style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <h2 className="technical" style={{ fontSize: '2.5rem', marginBottom: '1rem', letterSpacing: '0.1em' }}>
           ACTIVATE SOVEREIGN STACK
         </h2>
-        <p style={{ color: 'var(--hs-text-dim)', maxWidth: '600px', margin: '0 auto', fontSize: '0.9rem' }}>
+        <p style={{ color: 'var(--hs-text-dim)', maxWidth: '700px', margin: '0 auto', fontSize: '1rem', lineHeight: 1.6 }}>
           HealthShield AI is a local-first biometric node. No cloud analysis, no data leaks. 
-          Choose your protocol level to unlock clinical-grade hemodynamics.
+          Transition from basic tracking to high-fidelity hemodynamic trajectory projection.
         </p>
       </section>
 
       {/* Pricing Grid */}
-      <div className="col-span-12 hs-grid" style={{ gap: '1.5rem', alignItems: 'stretch' }}>
+      <div className="col-span-12 hs-grid" style={{ gap: '2rem', alignItems: 'stretch' }}>
         {tiers.map((tier) => (
           <div 
             key={tier.id}
@@ -137,16 +146,17 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
             <button 
               disabled={isPremium}
               onClick={() => handlePurchase(tier.id)}
-              className={`hs-badge-secure ${tier.highlight ? 'pulse-active' : ''}`}
+              className={`hs-btn-primary ${tier.highlight ? 'pulse-active' : ''}`}
               style={{ 
                 width: '100%', 
                 justifyContent: 'center', 
-                padding: '16px', 
+                padding: '20px', 
                 background: tier.highlight ? 'var(--hs-primary)' : 'rgba(255,255,255,0.05)',
                 color: tier.highlight ? '#050505' : 'white',
                 border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.1)',
                 cursor: isPremium ? 'not-allowed' : 'pointer',
-                fontWeight: 700
+                fontWeight: 800,
+                fontSize: '0.75rem'
               }}
             >
               {isPremium ? 'STACK ACTIVE' : 'ACTIVATE NODE'}
@@ -205,6 +215,7 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
         </div>
       </section>
     </div>
+    </section>
   );
 };
 
