@@ -185,7 +185,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   const updateProcessingStep = (stepIndex: number, progress: number) => {
     setProcessingSteps(prev => 
       prev.map((step, i) => 
-        i === stepIndex ? { ...step, progress, status: 'processing' as const } : step
+        i === stepIndex ? { ...step, progress: status: 'processing' as const } : step
       )
     );
   };
@@ -377,11 +377,18 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   };
 
   return (
-    <div className="obsidian-card" style={{ padding: '2rem', textAlign: 'center' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+    <div className="obsidian-card" style={{ padding: '2rem', textAlign: 'center', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h3 
           className="technical" 
-          style={{ fontSize: '1rem', color: '#00F2FF', cursor: 'pointer', userSelect: 'none' }}
+          style={{ 
+            fontSize: 'clamp(0.8rem, 1rem, 1.2rem)', 
+            color: '#00F2FF', 
+            cursor: 'pointer', 
+            userSelect: 'none',
+            flex: 1,
+            minWidth: '200px'
+          }}
           onClick={handleTitleClick}
         >
           OPTICAL SENTINEL {debug && (
@@ -393,13 +400,13 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
             </span>
           )}
         </h3>
-        <X size={18} style={{ cursor: 'pointer', color: '#849495' }} onClick={onClose} />
+        <X size={18} style={{ cursor: 'pointer', color: '#849495', flexShrink: 0 }} onClick={onClose} />
       </div>
 
-      {/* Main Sensor Display */}
-      <div style={{ position: 'relative', width: '220px', height: '220px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Main Sensor Display - RESPONSIVE SIZING */}
+      <div style={{ position: 'relative', width: 'min(200px, 90vw)', height: 'min(200px, 90vw)', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div className="sovereign-ring-container">
-          <svg width="240" height="240" viewBox="0 0 100 100">
+          <svg width="min(240px, 108vw)" height="min(240px, 108vw)" viewBox="0 0 100 100">
             <circle className="sovereign-ring-bg" cx="50" cy="50" r="46" />
             <circle 
               className="sovereign-ring-fill" 
@@ -417,8 +424,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
 
         <div style={{ 
           position: 'relative', 
-          width: '200px', 
-          height: '200px', 
+          width: '100%', 
+          height: '100%', 
           borderRadius: '50%', 
           overflow: 'hidden', 
           border: `2px solid ${pulseActive ? 'rgba(110, 216, 195, 0.5)' : 'rgba(110, 216, 195, 0.1)'}`,
@@ -460,12 +467,12 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                 </linearGradient>
               </defs>
               <path
-                d={`M 0 50 ${signalWave.map((val, i) => {
+                d={`M 0 30 ${signalWave.map((val, i) => {
                   const min = Math.min(...signalWave, 50);
                   const max = Math.max(...signalWave, 100);
                   const range = max - min || 1;
                   const normalized = range > 0 ? ((val - min) / range) * 40 : 50;
-                  return `L ${i * 4} ${50 - normalized}`;
+                  return `L ${i * 4} ${30 - normalized}`;
                 }).join(' ')}`}
                 fill="none"
                 stroke="url(#waveGradient)"
@@ -487,8 +494,16 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           }}>
             {isWarmup ? (
               <>
-                <RefreshCw size={30} className="spin" style={{ color: '#00F2FF' }} />
-                <span style={{ fontSize: '0.6rem', color: '#6ed8c3', marginTop: '0.5rem' }}>INITIALIZING...</span>
+                <RefreshCw size={30} className="spin" style={{ 
+                  color: '#00F2FF',
+                  // FIX 5: Responsive sizing
+                  fontSize: 'clamp(2rem, 5vw, 3rem)'
+                }} />
+                <span style={{ 
+                  fontSize: 'clamp(0.6rem, 1.5vw, 0.8rem)', 
+                  color: '#6ed8c3', 
+                  marginTop: '0.5rem'
+                }}>INITIALIZING...</span>
               </>
             ) : currentBpmAnimation ? (
               <>
@@ -496,7 +511,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                   <span 
                     className="metric-value" 
                     style={{ 
-                      fontSize: '3.5rem', 
+                      // FIX 5: Responsive sizing
+                      fontSize: 'clamp(2.5rem, 7vw, 4rem)',
                       textShadow: `0 0 ${confidence/5}px var(--hs-primary)`,
                       transform: pulseActive ? 'scale(1.05)' : 'scale(1)',
                       transition: 'transform 0.1s ease-in-out'
@@ -508,38 +524,61 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                     size={24} 
                     style={{ 
                       marginLeft: '0.5rem',
+                      // FIX 5: Responsive sizing
+                      width: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      height: 'clamp(1.2rem, 3vw, 1.5rem)',
                       color: pulseActive ? '#FF5050' : '#6ed8c3',
                       animation: pulseActive ? 'pulse 0.3s ease-in-out' : 'none'
                     }} 
                   />
                 </div>
-                <span className="technical scanning-text-pulse" style={{ fontSize: '0.6rem', color: '#6ed8c3' }}>
+                <span className="technical scanning-text-pulse" style={{ 
+                  fontSize: 'clamp(0.6rem, 1.5vw, 0.8rem)', 
+                  color: '#6ed8c3' 
+                }}>
                   {confidence < 30 ? "ACQUIRING..." : confidence < 70 ? "STABILIZING..." : "DECRYPTING..."}
                 </span>
               </>
             ) : (
-              <Camera size={40} style={{ color: '#00F2FF', opacity: 0.5 }} />
+              <Camera size={40} style={{ 
+                // FIX 5: Responsive sizing
+                width: 'clamp(2.5rem, 7vw, 4rem)',
+                height: 'clamp(2.5rem, 7vw, 4rem)',
+                color: '#00F2FF', 
+                opacity: 0.5 
+              }} />
             )}
           </div>
         </div>
       </div>
 
-      {/* Processing Steps Visualization */}
-      <div style={{ marginTop: '2.5rem' }}>
-        <div style={{ marginBottom: '1rem' }}>
+      {/* Processing Steps Visualization - RESPONSIVE */}
+      <div style={{ marginTop: 'min(1.5rem, 2vw)' }}>
+        <div style={{ marginBottom: 'min(0.5rem, 1vw)' }}>
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            marginBottom: '0.5rem' 
+            marginBottom: 'min(0.5rem, 1vw)' 
           }}>
-            <span className="technical" style={{ fontSize: '0.6rem', color: '#849495' }}>
+            <span className="technical" style={{ 
+              // FIX 5: Responsive sizing
+              fontSize: 'clamp(0.55rem, 0.7vw, 0.6rem)', 
+              color: '#849495' 
+            }}>
               SOVEREIGN SIGNAL INTEGRITY
             </span>
-            <span className="technical" style={{ fontSize: '0.6rem', color: '#6ed8c3' }}>
+            <span className="technical" style={{ 
+              // FIX 5: Responsive sizing
+              fontSize: 'clamp(0.55rem, 0.7vw, 0.6rem)', 
+              color: '#6ed8c3' 
+            }}>
               {confidence}%
             </span>
           </div>
-          <div className="pulse-container" style={{ height: '4px' }}>
+          <div className="pulse-container" style={{ 
+            height: 'min(4px, 0.5vw)', 
+            width: '100%' 
+          }}>
             <div 
               className="pulse-segment active" 
               style={{ 
@@ -552,37 +591,42 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           </div>
         </div>
 
-        {/* Processing Pipeline */}
-        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
-          <div style={{ fontSize: '0.6rem', color: '#00F2FF', marginBottom: '0.8rem', textAlign: 'left' }}>
-            <Activity size={12} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} />
+        {/* Processing Pipeline - RESPONSIVE */}
+        <div style={{ marginBottom: 'min(1rem, 1.5vw)', padding: 'min(0.8rem, 1vw)', background: 'rgba(0, 0, 0, 0.3)', borderRadius: 'min(8px, 0.5vw)' }}>
+          <div style={{ fontSize: 'clamp(0.55rem, 3vw, 0.75rem)', color: '#00F2FF', marginBottom: 'min(0.5rem, 1vw)', textAlign: 'left' }}>
+            <Activity size={12} style={{ marginRight: 'min(0.3rem, 0.5vw)', verticalAlign: 'middle' }} />
             PROCESSING PIPELINE
           </div>
           {processingSteps.map((step, index) => (
-            <div key={index} style={{ marginBottom: '0.6rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+            <div key={index} style={{ marginBottom: 'min(0.4rem, 0.8vw)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'min(0.2rem, 0.5vw)' }}>
                 <span style={{ 
-                  fontSize: '0.55rem', 
+                  // FIX 5: Responsive sizing
+                  fontSize: 'clamp(0.5rem, 0.7vw, 0.55rem)', 
                   color: getStatusColor(step.status),
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: 'min(0.2rem, 0.5vw)'
                 }}>
                   {step.status === 'complete' && '✓'} 
                   {step.status === 'processing' && (
-                    <RefreshCw size={10} className="spin" style={{ marginRight: '0.2rem' }} />
+                    <RefreshCw size={10} className="spin" style={{ marginRight: 'min(0.15rem, 0.3vw)' }} />
                   )}
                   {step.name}
                 </span>
-                <span style={{ fontSize: '0.5rem', color: '#849495' }}>{step.progress}%</span>
+                <span style={{ 
+                  // FIX 5: Responsive sizing
+                  fontSize: 'clamp(0.45rem, 0.65vw, 0.5rem)', 
+                  color: '#849495' 
+                }}>{step.progress}%</span>
               </div>
-              <div style={{ height: '2px', background: 'rgba(132, 148, 149, 0.2)', borderRadius: '1px' }}>
+              <div style={{ height: 'min(2px, 0.3vw)', background: 'rgba(132, 148, 149, 0.2)', borderRadius: 'min(1px, 0.25vw)' }}>
                 <div 
                   style={{ 
                     width: `${step.progress}%`, 
                     height: '100%', 
                     background: getStatusColor(step.status),
-                    borderRadius: '1px',
+                    borderRadius: 'min(1px, 0.25vw)',
                     transition: 'width 0.3s ease-out'
                   }} 
                 />
@@ -591,28 +635,40 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           ))}
         </div>
 
-        {/* Real-time Signal Waveform */}
-        <div style={{ marginTop: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span className="technical" style={{ fontSize: '0.6rem', color: '#849495' }}>
-              <Activity size={10} style={{ marginRight: '0.3rem', verticalAlign: 'middle' }} />
+        {/* Real-time Signal Waveform - RESPONSIVE */}
+        <div style={{ marginTop: 'min(1rem, 2vw)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'min(0.5rem, 1vw)' }}>
+            <span className="technical" style={{ 
+              // FIX 5: Responsive sizing
+              fontSize: 'clamp(0.55rem, 0.6vw, 0.6rem)', 
+              color: '#849495' 
+            }}>
+              <Activity size={10} style={{ marginRight: 'min(0.25rem, 0.5vw)', verticalAlign: 'middle' }} />
               PULSE WAVEFORM
             </span>
-            <span className="technical" style={{ fontSize: '0.6rem', color: pulseActive ? '#FF5050' : '#6ed8c3' }}>
+            <span className="technical" style={{ 
+              // FIX 5: Responsive sizing
+              fontSize: 'clamp(0.55rem, 0.6vw, 0.6rem)', 
+              color: pulseActive ? '#FF5050' : '#6ed8c3' 
+            }}>
               {pulseActive ? 'DETECTED' : 'WAITING'}
             </span>
           </div>
-          <svg style={{ width: '100%', height: '60px', background: 'rgba(0, 0, 0, 0.2)', borderRadius: '4px' }}>
+          <svg style={{ width: '100%', height: 'min(60px, 15vw)', background: 'rgba(0, 0, 0, 0.2)', borderRadius: 'min(4px, 0.8vw)' }}>
             <defs>
-              <linearGradient id="signalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <linearGradient id="signalGradient" x1="0%" y1="0%" x2="0%" y2="0%">
                 <stop offset="0%" stopColor="rgba(0, 242, 255, 0.8)" />
                 <stop offset="100%" stopColor="rgba(110, 216, 195, 0.2)" />
               </linearGradient>
             </defs>
             <path
-              d={`M 0 30 ${signalWave.map((val, i) => 
-                `L ${i * 2} ${30 - ((val - Math.min(...signalWave, 50)) / (Math.max(...signalWave, 100) - Math.min(...signalWave, 50) + 1) * 20)}`
-              ).join(' ')}`}
+              d={`M 0 ${min(60, 15vw) / 2} ${signalWave.map((val, i) => 
+                const min = Math.min(...signalWave, 50);
+                const max = Math.max(...signalWave, 100);
+                const range = max - min || 1;
+                const normalized = range > 0 ? ((val - min) / range) * 40 : min(60, 15vw) / 2;
+                return `L ${i * 2} ${min(60, 15vw) / 2 - normalized}`;
+              }).join(' ')}`}
               fill="none"
               stroke="url(#signalGradient)"
               strokeWidth="2"
@@ -621,17 +677,25 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
             />
           </svg>
           
-          {/* Signal Quality Indicators */}
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Droplets size={12} style={{ color: isLowSignal ? '#FF5050' : '#6ed8c3' }} />
-              <span style={{ fontSize: '0.5rem', color: '#849495' }}>
+          {/* Signal Quality Indicators - RESPONSIVE */}
+          <div style={{ display: 'flex', gap: 'min(0.5rem, 1vw)', marginTop: 'min(0.6rem, 1.2vw)', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'min(0.2rem, 0.4vw)' }}>
+              <Droplets size={12} style={{ color: isLowSignal ? '#FF5050' : '#6ed8c3', width: 'clamp(0.9rem, 2vw, 1rem)' }} />
+              <span style={{ 
+                // FIX 5: Responsive sizing
+                fontSize: 'clamp(0.4rem, 0.6vw, 0.65rem)', 
+                color: '#849495' 
+              }}>
                 {isLowSignal ? 'LOW SIGNAL' : 'SIGNAL OK'}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Heart size={12} style={{ color: pulseActive ? '#FF5050' : '#6ed8c3' }} />
-              <span style={{ fontSize: '0.5rem', color: '#849495' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'min(0.2rem, 0.4vw)' }}>
+              <Heart size={12} style={{ color: pulseActive ? '#FF5050' : '#6ed8c3', width: 'clamp(0.9rem, 2vw, 1rem)' }} />
+              <span style={{ 
+                // FIX 5: Responsive sizing
+                fontSize: 'clamp(0.4rem, 0.6vw, 0.65rem)', 
+                color: '#849495' 
+              }}>
                 {pulseActive ? 'PULSE ACTIVE' : 'ACQUIRING'}
               </span>
             </div>
@@ -639,57 +703,84 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         </div>
       </div>
 
-      {/* Status Messages */}
-      <p style={{ fontSize: '0.7rem', color: isLowSignal ? '#FF5050' : '#849495', marginTop: '1.5rem', lineHeight: 1.6 }}>
+      {/* Status Messages - RESPONSIVE TEXT WITH WRAPPING */}
+      <p style={{ 
+        // FIX 5: Responsive sizing with word-wrap
+        fontSize: 'clamp(0.65rem, 1.5vw, 0.8rem)', 
+        color: isLowSignal ? '#FF5050' : '#849495', 
+        marginTop: 'min(0.8rem, 2vw)', 
+        lineHeight: 'clamp(1.1, 1.4)', 
+        wordWrap: 'break-word',
+        maxWidth: '100%',
+        overflowWrap: 'break-word'
+      }}>
         {error || (isLowSignal ? (
           isTooDark 
             ? "CRITICAL: Light intensity too low. You MUST completely cover BOTH camera lens and flash/light source. If your flash is not active, find a bright external light."
             : "SIGNAL INTERFERENCE: Ensure your finger is centered over lens. The sensor must see pure arterial redness to calculate pulse wave."
-        ) : "Place your index finger firmly over BOTH camera lens and flash/light source. The light must pass through your finger for Sentinel to detect your pulse.")}
+        ) : "Place your index finger firmly over BOTH camera lens and flash/light source. The light must pass through your finger for Sentinel to detect your pulse."}
       </p>
 
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '10px', marginTop: '1.5rem' }}>
+      {/* Action Buttons - RESPONSIVE */}
+      <div style={{ display: 'flex', gap: 'min(0.4rem, 1rem)', marginTop: 'min(1rem, 2vw)', flexWrap: 'wrap', justifyContent: 'center' }}>
         <button 
           onClick={startCamera}
           className="hs-badge-secure" 
-          style={{ flex: 1, background: 'rgba(0, 242, 255, 0.1)', cursor: 'pointer', border: '1px solid rgba(0, 242, 255, 0.2)' }}
+          style={{ 
+            flex: '0 1 30px',
+            background: 'rgba(0, 242, 255, 0.1)', 
+            cursor: 'pointer', 
+            border: '1px solid rgba(0, 242, 255, 0.2)',
+            padding: 'min(0.6rem, 1.2vw)',
+            // FIX 5: Responsive sizing
+            fontSize: 'clamp(0.65rem, 3vw, 0.8rem)'
+          }}
         >
-          <RefreshCw size={12} />
-          <span>RETRY SYNC</span>
+          <RefreshCw size={12} style={{ width: 'clamp(0.9rem, 3vw, 1rem)' }} />
+          <span style={{ fontSize: 'clamp(0.65rem, 3vw, 0.8rem)' }}>RETRY SYNC</span>
         </button>
 
         <button 
           onClick={simulateCapture}
           className="hs-badge-secure" 
-          style={{ flex: 1, background: 'rgba(110, 216, 195, 0.1)', cursor: 'pointer', border: '1px solid rgba(110, 216, 195, 0.2)', color: '#6ed8c3' }}
+          style={{ 
+            flex: '0 1 30px',
+            background: 'rgba(110, 216, 195, 0.1)', 
+            cursor: 'pointer', 
+            border: '1px solid rgba(110, 216, 195, 0.2)',
+            padding: 'min(0.6rem, 1.2vw)',
+            color: '#6ed8c3',
+            // FIX 5: Responsive sizing
+            fontSize: 'clamp(0.65rem, 3vw, 0.8rem)'
+          }}
         >
-          <Zap size={12} />
-          <span>SIMULATE</span>
+          <Zap size={12} style={{ width: 'clamp(0.9rem, 3vw, 1rem)' }} />
+          <span style={{ fontSize: 'clamp(0.65rem, 3vw, 0.8rem)' }}>SIMULATE</span>
         </button>
       </div>
 
-      {/* Info Card */}
+      {/* Info Card - RESPONSIVE */}
       <div style={{ 
-        marginTop: '2rem', 
-        padding: '1rem', 
+        marginTop: 'min(1.5rem, 3vw)', 
+        padding: 'min(0.8rem, 1vw)', 
         background: 'rgba(0, 0, 0, 0.3)', 
-        borderRadius: '8px',
+        borderRadius: 'min(8px, 0.5vw)',
         textAlign: 'left',
-        border: '1px solid rgba(110, 216, 195, 0.1)'
+        border: '1px solid rgba(110, 216, 195, 0.1)',
+        maxWidth: '100%'
       }}>
-        <div style={{ fontSize: '0.6rem', color: '#00F2FF', marginBottom: '0.5rem' }}>
-          <AlertTriangle size={12} style={{ marginRight: '0.3rem', verticalAlign: 'middle' }} />
+        <div style={{ fontSize: 'clamp(0.55rem, 3vw, 0.75rem)', color: '#00F2FF', marginBottom: 'min(0.4rem, 1vw)' }}>
+          <AlertTriangle size={12} style={{ marginRight: 'min(0.2rem, 0.5vw)', verticalAlign: 'middle', width: 'clamp(0.8rem, 3vw, 1rem)' }} />
           HOW THIS DIFFERS FROM OTHER APPS
         </div>
-        <div style={{ fontSize: '0.55rem', color: '#849495', lineHeight: 1.8 }}>
-          <div style={{ marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: 'clamp(0.4rem, 2.5vw, 0.6rem)', color: '#849495', lineHeight: 'clamp(1.3, 1.4)', wordWrap: 'break-word' }}>
+          <div style={{ marginBottom: 'min(0.4rem, 1vw)' }}>
             <strong style={{ color: '#6ed8c3' }}>PPG (Photoplethysmography) Method:</strong> Unlike apps using accelerometer-based PPG, this uses optical light absorption through your finger's blood vessels, similar to medical pulse oximeters.
           </div>
-          <div style={{ marginBottom: '0.5rem' }}>
+          <div style={{ marginBottom: 'min(0.4rem, 1vw)' }}>
             <strong style={{ color: '#6ed8c3' }}>Camera-Based Detection:</strong> Your phone's camera + flash measures subtle light variations caused by blood volume changes during each heartbeat.
           </div>
-          <div style={{ marginBottom: '0.5rem' }}>
+          <div style={{ marginBottom: 'min(0.4rem, 1vw)' }}>
             <strong style={{ color: '#6ed8c3' }}>Real-Time Processing:</strong> Live signal analysis with noise filtering, peak detection, and validation - unlike apps that just count taps or use pre-recorded data.
           </div>
           <div>
