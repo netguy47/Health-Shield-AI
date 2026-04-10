@@ -43,16 +43,25 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     { name: 'BPM Calculation', status: 'pending', progress: 0 },
     { name: 'Validation', status: 'pending', progress: 0 }
   ]);
+  
+  // Simulated pulse wave generator for SIMULATE mode
+  const simulationIntervalRef = useRef<number | null>(null);
+  const pulseAnimationIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     startCamera();
     return () => {
+      // FIX 1: Stop animation loops on unmount
       scanningActive.current = false;
       stopCamera();
+      if (waveAnimationRef.current) cancelAnimationFrame(waveAnimationRef.current);
+      if (pulseRef.current) cancelAnimationFrame(pulseRef.current);
+      if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current);
+      if (pulseAnimationIntervalRef.current) clearInterval(pulseAnimationIntervalRef.current);
     };
   }, []);
 
-  // Wave Animation
+  // Wave Animation - FIX 1: Check scanningActive before updating
   useEffect(() => {
     const updateWave = () => {
       if (!scanningActive.current) return;
@@ -74,9 +83,10 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     };
   }, [isScanning]);
 
-  // Pulse Animation
+  // Pulse Animation - FIX 1: Check scanningActive before updating
   useEffect(() => {
     const updatePulse = () => {
+      if (!scanningActive.current && !pulseActive) return;
       if (lastPulseTime.current && Date.now() - lastPulseTime.current < 150) {
         setPulseActive(true);
       } else {
@@ -91,7 +101,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         cancelAnimationFrame(pulseRef.current);
       }
     };
-  }, []);
+  }, [isScanning, pulseActive]);
 
   useEffect(() => {
     if (isScanning) {
@@ -152,6 +162,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
       tracks.forEach(track => track.stop());
     }
+    // FIX 1: Stop scanningActive to kill animation loops
+    scanningActive.current = false;
     setIsScanning(false);
   };
 
@@ -286,12 +298,21 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     }
   };
 
+  // FIX 2: Synthetic pulse wave generator for SIMULATE mode
+  const generateSyntheticPulseWave = (time: number): number => {
+    const frequency = 1.2; // 72 BPM = 1.2 Hz
+    const amplitude = 30;
+    const baseline = 80;
+    return baseline + amplitude * Math.sin(2 * Math.PI * frequency * time);
+  };
+
   const simulateCapture = () => {
     setConfidence(0);
     setBpm(72);
     setCurrentBpmAnimation(72);
+    setSignalWave([]);
     
-    // Animate processing steps
+    // FIX 2: Animate processing steps
     let stepIndex = 0;
     const stepInterval = setInterval(() => {
       if (stepIndex < processingSteps.length) {
@@ -303,10 +324,37 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       }
     }, 500);
 
+    // FIX 2: Generate synthetic pulse wave during simulation
+    let waveTime = 0;
+    simulationIntervalRef.current = setInterval(() => {
+      waveTime += 0.05;
+      const newValue = generateSyntheticPulseWave(waveTime);
+      setSignalWave(prev => {
+        const newWave = [...prev, newValue];
+        if (newWave.length > 50) newWave.shift();
+        return newWave;
+      });
+    }, 50);
+
+    // FIX 2: Simulate heart icon pulsing
+    let pulseTime = 0;
+    pulseAnimationIntervalRef.current = setInterval(() => {
+      pulseTime += 0.05;
+      if (pulseTime >= 1) {
+        setPulseActive(true);
+      } else {
+        setPulseActive(false);
+      }
+      pulseTime = pulseTime >= 0.5 ? pulseTime - 0.5 : 0;
+    }, 50);
+
     const interval = setInterval(() => {
       setConfidence(prev => {
         if (prev >= 100) {
           clearInterval(interval);
+          clearInterval(stepInterval);
+          clearInterval(simulationIntervalRef.current);
+          clearInterval(pulseAnimationIntervalRef.current);
           const finalBpm = Math.floor(Math.random() * (90 - 65 + 1) + 65);
           onCapture(finalBpm);
           return 100;
@@ -361,6 +409,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
               strokeDasharray="289"
               strokeDashoffset={289 - (289 * confidence) / 100}
               transform="rotate(-90 50 50)"
+              // FIX 3: Add smooth transition to progress ring
+              style={{ transition: 'stroke-dashoffset 0.4s ease-out' }}
             />
           </svg>
         </div>
@@ -387,6 +437,44 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           <canvas ref={canvasRef} width="100" height="100" style={{ display: 'none' }} />
           <div className="scan-line" />
           <div className="biometric-glow" style={{ opacity: confidence / 150 }} />
+          
+          {/* FIX 4: Correct waveform transform scaling - use percent for both dimensions */}
+          <div style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100%' 
+          }}>
+            <svg style={{ 
+              width: '100%', 
+              height: '100%',
+              viewBox: '0 0 200 100', 
+              preserveAspectRatio: 'none'
+            }}>
+              <defs>
+                <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="rgba(0, 242, 255, 0)" />
+                  <stop offset="50%" stopColor="rgba(0, 242, 255, 0.3)" />
+                  <stop offset="100%" stopColor="rgba(110, 216, 195, 0.2)" />
+                </linearGradient>
+              </defs>
+              <path
+                d={`M 0 50 ${signalWave.map((val, i) => {
+                  const min = Math.min(...signalWave, 50);
+                  const max = Math.max(...signalWave, 100);
+                  const range = max - min || 1;
+                  const normalized = range > 0 ? ((val - min) / range) * 40 : 50;
+                  return `L ${i * 4} ${50 - normalized}`;
+                }).join(' ')}`}
+                fill="none"
+                stroke="url(#waveGradient)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
           
           <div style={{ 
             position: 'absolute', 
@@ -458,7 +546,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                 width: `${confidence}%`, 
                 height: '100%', 
                 borderRadius: '2px',
-                transition: 'width 0.3s ease-in-out'
+                transition: 'width 0.3s ease-out'
               }} 
             />
           </div>
@@ -495,7 +583,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                     height: '100%', 
                     background: getStatusColor(step.status),
                     borderRadius: '1px',
-                    transition: 'width 0.3s ease-in-out'
+                    transition: 'width 0.3s ease-out'
                   }} 
                 />
               </div>
@@ -557,7 +645,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           isTooDark 
             ? "CRITICAL: Light intensity too low. You MUST completely cover BOTH camera lens and flash/light source. If your flash is not active, find a bright external light."
             : "SIGNAL INTERFERENCE: Ensure your finger is centered over lens. The sensor must see pure arterial redness to calculate pulse wave."
-        ) : "Place your index finger firmly over BOTH the camera lens and the flash/light source. The light must pass through your finger for the Sentinel to detect your pulse.")}
+        ) : "Place your index finger firmly over BOTH camera lens and flash/light source. The light must pass through your finger for Sentinel to detect your pulse.")}
       </p>
 
       {/* Action Buttons */}
