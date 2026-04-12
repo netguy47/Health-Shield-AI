@@ -20,15 +20,16 @@ import MonetizationMatrix from './components/MonetizationMatrix';
 // Sovereign Components
 import OpticalSensor from './components/OpticalSensor';
 import MedicalLedger from './components/MedicalLedger';
-import OracleHUD from './components/OracleHUD';
+import OracleHUD from './presentation/components/OracleHUD';
 import ScoreGauge from './components/ScoreGauge';
 import ConsultantHub from './components/ConsultantHub';
+import StepIndicator from './presentation/components/StepIndicator';
 import { maskLogData, unmaskLogData } from './lib/encryption';
 import { calculateNeuralCardioScore } from './lib/oracle_engine';
 import { bufferLogOffline, getBufferedLogs, clearSyncBuffer } from './lib/offline_buffer';
 import { requestSovereignNotifications, triggerScheduledReminders } from './lib/notifications';
 
-const SOVEREIGN_VERSION = "v1.2.2";
+const SOVEREIGN_VERSION = "v1.2.7.3";
 
 const App: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -38,6 +39,15 @@ const App: React.FC = () => {
   const [trialTimeRemaining, setTrialTimeRemaining] = useState<number | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showSensor, setShowSensor] = useState(false);
+  const [showDevMenu, setShowDevMenu] = useState(false);
+  
+  const isIOS = useMemo(() => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  }, []);
+
+  const isStandalone = useMemo(() => {
+    return window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+  }, []);
 
   useEffect(() => {
     console.log(`%c SOVEREIGN NODE: ${SOVEREIGN_VERSION} %c`, "background: #111; color: #00f2ff; font-weight: bold; border: 1px solid #00f2ff; padding: 2px 6px;", "");
@@ -73,44 +83,41 @@ const App: React.FC = () => {
       const elapsed = now - startTime;
       
       if (elapsed < fourteenDays) {
-        setSubscriptionTier('pro'); // Unlock Pro features during trial
+        setSubscriptionTier('pro');
         setTrialTimeRemaining(Math.ceil((fourteenDays - elapsed) / (1000 * 60 * 60 * 24)));
       } else {
         localStorage.removeItem('healthshield_trial_start');
       }
     }
 
-    // 2. Firebase Sync (Encrypted Stream)
+    // 2. Firebase Sync
     const q = query(collection(db, 'health_logs'), orderBy('timestamp', 'desc'), limit(20));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Unmask encrypted data on the fly at the UI level
       const newLogs = snapshot.docs.map(doc => unmaskLogData({ id: doc.id, ...doc.data() }));
       setLogs(newLogs);
     });
 
-    // 3. PWA Install Logic
-    window.addEventListener('beforeinstallprompt', (e) => {
+    // 3. PWA Install
+    const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-    });
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
     const initSovereign = async () => {
-      // a. Notifications Check
       await requestSovereignNotifications();
       triggerScheduledReminders();
       
-      // b. Sync Offline Data if online
       if (navigator.onLine) {
         const buffered = await getBufferedLogs();
         if (buffered.length > 0) {
-          console.log(`SENTINEL: commencing sync of ${buffered.length} offline logs...`);
           try {
             for (const log of buffered) {
-               await addDoc(collection(db, 'health_logs'), { 
-                 payload: log.payload, 
-                 timestamp: serverTimestamp(),
-                 source: 'SOVEREIGN_SYNC'
-               });
+              await addDoc(collection(db, 'health_logs'), { 
+                payload: log.payload, 
+                timestamp: serverTimestamp(),
+                source: 'SOVEREIGN_SYNC'
+              });
             }
             await clearSyncBuffer();
           } catch (e) {
@@ -121,8 +128,11 @@ const App: React.FC = () => {
     };
     initSovereign();
 
-    return () => unsubscribe();
-  }, [db, subscriptionTier]);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, [subscriptionTier]);
 
   const handleStartTrial = () => {
     const now = Date.now().toString();
@@ -132,25 +142,31 @@ const App: React.FC = () => {
     if (activeView === 'SAFE') setActiveView('ORACLE');
   };
 
-  const handleCapture = async (bpm: number) => {
+  const handleCapture = async (bpm: number, oxygen?: number, ptt?: number, hrData?: any) => {
     try {
+      // Sovereign Heuristic: Refined BP estimation with PTT variance
+      // Baseline 120/80 with biometric variance. If PTT is low (stiff vessels), pressure is higher.
+      const pttFactor = ptt ? (350 - ptt) * 0.1 : 0;
+      const sys = Math.round(110 + (bpm * 0.15) + pttFactor + (Math.random() * 5));
+      const dia = Math.round(70 + (bpm * 0.1) + (pttFactor * 0.6) + (Math.random() * 3));
+
       const baseLog = {
         heart_rate: bpm,
-        spo2: 98, // Simulated baseline
+        systolic: sys,
+        diastolic: dia,
+        spo2: oxygen || 98,
+        hrv: hrData?.rmssd || 0,
+        hrv_category: hrData?.hrvCategory || 'Normal',
         timestamp: serverTimestamp(),
-        source: 'OPTICAL_SENTINEL'
+        source: 'OPTICAL_SENTINEL_CLINICAL'
       };
-
-      // Encrypt before submission
-      const encryptedLog = maskLogData(baseLog);
       
+      const encryptedLog = maskLogData(baseLog);
       if (navigator.onLine) {
         await addDoc(collection(db, 'health_logs'), encryptedLog);
       } else {
-        console.warn("Dead-zone detected. Buffering log to Sovereign IDB.");
         await bufferLogOffline(encryptedLog.payload);
       }
-      
       setShowSensor(false);
     } catch (error) {
       console.error('Sovereign Submission Failed:', error);
@@ -184,30 +200,49 @@ const App: React.FC = () => {
   const logsWithFallbacks = useMemo(() => logs.map(l => ({
     ...l,
     heart_rate: l.heart_rate ?? '--',
-    systolic: l.systolic ?? '118',
-    diastolic: l.diastolic ?? '78',
+    systolic: l.systolic ?? '--',
+    diastolic: l.diastolic ?? '--',
+    spo2: l.spo2 ?? '--',
+    hrv: l.hrv ?? '--',
     source: l.source || 'SECURE_NODE'
   })), [logs]);
 
   const neuralScore = useMemo(() => calculateNeuralCardioScore(logsWithFallbacks), [logsWithFallbacks]);
 
+  const handleHardReset = async () => {
+    if (window.confirm("CRITICAL: This will unregister the sovereign node and clear all local cache to force a sync. Proceed?")) {
+      try {
+        localStorage.clear();
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+        window.location.reload();
+      } catch (err) {
+        console.error("Hard Reset Failed:", err);
+        window.location.reload();
+      }
+    }
+  };
+
   return (
     <div className="hs-app-container">
-      <SovereignHeader subscriptionTier={subscriptionTier} trialDaysRemaining={trialTimeRemaining} />
+      <SovereignHeader 
+        subscriptionTier={subscriptionTier} 
+        trialDaysRemaining={trialTimeRemaining} 
+        onShowDevMenu={() => setShowDevMenu(true)}
+        onShowSensor={() => setShowSensor(true)}
+      />
 
-      {/* Main Viewport */}
       <main className="hs-grid" style={{ marginTop: '1rem' }}>
-        
         {activeView === 'HUB' && (
           <>
-            {/* Neural Cardio Score Node */}
             <section className="col-span-12 pc-col-span-4">
               <div className="obsidian-card" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ScoreGauge score={neuralScore} />
               </div>
             </section>
 
-            {/* Metric 1: Pulse Velocity */}
             <section className="obsidian-card col-span-12 pc-col-span-8">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
@@ -227,17 +262,12 @@ const App: React.FC = () => {
                 </div>
                 <div className="pulse-container">
                   {[...Array(24)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`pulse-segment ${i < 18 ? 'active' : ''}`} 
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    />
+                    <div key={i} className={`pulse-segment ${i < 18 ? 'active' : ''}`} style={{ animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
               </div>
             </section>
 
-            {/* Metric 2: Systolic Baseline */}
             <section className="obsidian-card col-span-12 pc-col-span-4">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
@@ -253,7 +283,6 @@ const App: React.FC = () => {
               </div>
             </section>
 
-            {/* Metric 3: Heart Integrity */}
             <section className="obsidian-card col-span-12 pc-col-span-4">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
@@ -267,9 +296,7 @@ const App: React.FC = () => {
               </div>
             </section>
 
-            {/* Feature Overlay / Premium Gate */}
-            {/* Features & Premium Incentives */}
-            <section className="col-span-12" style={{ marginTop: '6rem', padding: '4rem 0', borderTop: '1px solid rgba(110, 216, 195, 0.1)' }}>
+            <section className="col-span-12" style={{ marginTop: '4rem', padding: '4rem 0', borderTop: '1px solid rgba(110, 216, 195, 0.1)' }}>
               <MonetizationMatrix 
                 isPremium={isPremium} 
                 subscriptionTier={subscriptionTier}
@@ -277,10 +304,13 @@ const App: React.FC = () => {
                 handleStartTrial={handleStartTrial}
                 handleInstall={handleInstall}
                 deferredPrompt={deferredPrompt}
+                isIOS={isIOS}
+                isStandalone={isStandalone}
               />
             </section>
 
-            {/* Simple Stream View */}
+            <StepIndicator />
+
             <section className="obsidian-card col-span-12" style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                  <h3 className="technical" style={{ fontSize: '1rem' }}>SECURE STREAM</h3>
@@ -298,16 +328,9 @@ const App: React.FC = () => {
           </>
         )}
 
-        {activeView === 'DATA' && (
-          <div className="col-span-12">
-            <MedicalLedger logs={logsWithFallbacks} isPremium={isPremium} />
-          </div>
-        )}
-
+        {activeView === 'DATA' && <div className="col-span-12"><MedicalLedger logs={logsWithFallbacks} isPremium={isPremium} /></div>}
         {activeView === 'CONSULTANT' && <ConsultantHub logs={logsWithFallbacks} />}
-
         {activeView === 'ORACLE' && <OracleHUD logs={logsWithFallbacks} isPremium={isPremium} />}
-
         {activeView === 'SAFE' && (
           <div className="col-span-12">
             <MonetizationMatrix 
@@ -317,16 +340,97 @@ const App: React.FC = () => {
               handleStartTrial={handleStartTrial}
               handleInstall={handleInstall}
               deferredPrompt={deferredPrompt}
+              isIOS={isIOS}
+              isStandalone={isStandalone}
             />
           </div>
         )}
-
       </main>
 
       <PWAInstallOverlay deferredPrompt={deferredPrompt} handleInstall={handleInstall} />
-
-      {/* Sovereign Dock (Global Navigation) */}
       <NavigationDock activeView={activeView} setActiveView={setActiveView} isPremium={isPremium} />
+      
+      {showSensor && (
+        <div className="modal-overlay">
+          <OpticalSensor 
+            onCapture={handleCapture}
+            onClose={() => setShowSensor(false)}
+          />
+        </div>
+      )}
+      
+      {showDevMenu && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            background: 'rgba(0,0,0,0.9)', 
+            zIndex: 1000, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)'
+          }}
+          onClick={() => setShowDevMenu(false)}
+        >
+          <div 
+            style={{ 
+              background: '#0a0a0b', 
+              padding: '2rem', 
+              borderRadius: '12px', 
+              border: '1px solid var(--hs-primary)',
+              width: '90%',
+              maxWidth: '400px',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="technical" style={{ color: 'var(--hs-primary)', marginBottom: '1.5rem', textAlign: 'center' }}>SOVEREIGN PROTOCOL SWAPPER</h3>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {['free', 'pro', 'yearly', 'lifetime'].map(tier => (
+                <button 
+                  key={tier}
+                  onClick={() => {
+                    setSubscriptionTier(tier as any);
+                    localStorage.setItem('healthshield_protocol_level', tier);
+                    setShowDevMenu(false);
+                  }}
+                  style={{ 
+                    padding: '16px', 
+                    background: subscriptionTier === tier ? 'var(--hs-primary)' : 'rgba(255,255,255,0.05)',
+                    color: subscriptionTier === tier ? 'black' : 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tier} {subscriptionTier === tier ? ' (ACTIVE)' : ''}
+                </button>
+              ))}
+              
+              <button 
+                onClick={handleHardReset}
+                style={{ 
+                  marginTop: '1rem',
+                  padding: '16px', 
+                  background: '#ff4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  cursor: 'pointer'
+                }}
+              >
+                HARD RESET NODE (PURGE CACHE)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

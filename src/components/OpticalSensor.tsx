@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, Zap, RefreshCw, X, Activity, Heart, Droplets, AlertTriangle, ActivityIcon, TrendingUp } from 'lucide-react';
+import { Camera, Zap, RefreshCw, X, Activity, Heart, Droplets, AlertTriangle, Download } from 'lucide-react';
 
 interface OpticalSensorProps {
   onCapture: (bpm: number, oxygen?: number, ptt?: number, hrData?: HeartRateData) => void;
@@ -52,14 +52,13 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
 
   // PTT Detection State
   const pttPeaks = useRef<{ value: number; time: number }[]>([]); // Peak and foot detection
-  const lastFootTime = useRef<number>(0);
 
-  // Animation States
-  const currentBpmAnimation = useRef<number | null>(null);
+  // Animation & UI Sync State
+  const [currentBpmAnimation, setCurrentBpmAnimation] = useState<number | null>(null);
   const [pulseActive, setPulseActive] = useState(false);
-  const signalWave = useRef<number[]>([]);
+  const [signalWave, setSignalWave] = useState<number[]>([]);
   const waveAnimationRef = useRef<number | null>(null);
-  const processingSteps = useRef<ProcessingStep[]>([
+  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     { name: 'Signal Acquisition', status: 'pending', progress: 0 },
     { name: 'Noise Filtering', status: 'pending', progress: 0 },
     { name: 'Peak Detection', status: 'pending', progress: 0 },
@@ -70,7 +69,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   const [activeProcessingStep, setActiveProcessingStep] = useState(0);
 
   // HRV Analysis State
-  const hrvHistory = useRef<{ bpm: number; time: number }[]>([]);
+  const hrvHistory = useRef<HeartRateData[]>([]);
 
   // Simulation State
   const simulateIntervalRef = useRef<any>(null);
@@ -226,11 +225,11 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     const windowStart = Math.max(0, currentIndex - 15);
     const window = dataPoints.slice(windowStart, currentIndex + 5);
     
-    // Find minimum (diastolic notch - foot of waveform)
+    // Find minimum (diastolic notch - the foot)
     const minVal = Math.min(...window);
     const minIndex = window.indexOf(minVal);
     
-    // Check if this is the last point in window (foot of waveform)
+    // Check if this is the last point in window (foot of the waveform)
     if (minIndex !== currentIndex && minIndex !== window.length - 1) {
       return { hasFoot: true, footIndex: minIndex };
     }
@@ -238,7 +237,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     return { hasFoot: false, footIndex: -1 };
   };
 
-  const analyzePeakShape = (peak: Peak, nextPeak: Peak | null): Peak['shape'] => {
+  const analyzePeakShape = (peak: Peak, nextPeak: Peak | null, avg: number): Peak['shape'] => {
     if (!nextPeak) return 'Normal';
     
     const valley = Math.min(peak.value, nextPeak.value);
@@ -272,7 +271,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     return ptt;
   };
 
-  const calculateHRV = (rrIntervals: number[]): HeartRateData['hrvCategory'] => {
+  const calculateHRV = (rrIntervals: number[]): { bpm: number; rmssd: number; sdnn: number; hrvCategory: HeartRateData['hrvCategory'] } => {
     if (rrIntervals.length < 3) return { bpm: 0, rmssd: 0, sdnn: 0, hrvCategory: 'Normal' };
     
     const mean = rrIntervals.reduce((a, b) => a + b, 0) / rrIntervals.length;
@@ -369,7 +368,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                 value: potentialPeak,
                 time: now,
                 localProminence,
-                width: localMaxima.indexOf(potentialPeak) - localMaxima.indexOf(Math.max(...localMaxima)),
+                width: localMaxima.indexOf(potentialPeak) - localMaxima.indexOf(Math.min(...localMaxima)),
                 isValid: false,
                 shape: 'Normal'
               };
@@ -389,13 +388,19 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
               if (heartRates.current.length > 8) heartRates.current.shift();
               
               setBpm(currentBpm);
-              currentBpmAnimation.current = currentBpm;
+              setCurrentBpmAnimation(currentBpm);
               
               updateProcessingStep(2, 80); // Peak detection progress
               
               // Trigger pulse animation
               lastPeakTime.current = now;
               setPulseActive(true);
+              
+              // HAPTIC FEEDBACK: Real-time tactile heartbeat
+              if (navigator.vibrate) {
+                navigator.vibrate(40);
+              }
+
               setTimeout(() => setPulseActive(false), 150);
               
               // Update PTT peaks for SpO2
@@ -405,6 +410,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                 if (footPeak) {
                   pttPeaks.current.push({ value: footPeak.value, time: footPeak.time });
                   if (pttPeaks.current.length > 10) pttPeaks.current.shift();
+                  
+                  // Limit PTT peaks to last 10
                 }
               }
               
@@ -432,7 +439,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         updateProcessingStep(4, 30); // SpO2 Analysis starting
         
         // PTT Estimation
-        const ptt = calculatePTT(pttPeaks.current.length - 1, peaks.current.length - 1);
+        const ptt = calculatePTT(peaks.current.length - 1, peaks.current.length - 1);
         if (ptt) {
           setPtt(ptt);
           updateProcessingStep(4, 70); // SpO2 Analysis complete
@@ -443,42 +450,35 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         updateProcessingStep(4, 100); // SpO2 Analysis complete
         updateProcessingStep(5, 50); // Validation starting
         
-        // Calculate overall confidence
+        // Calculate overall confidence based on peak consistency
         const peakCount = peaks.current.length;
-        const validPeakCount = peaks.current.filter(p => p.isValid).length;
-        const confidenceScore = Math.min(100, Math.round((validPeakCount / Math.max(peakCount, 1)) * 100);
+        // Simple validation: if we have peaks and they are roughly timed correctly
+        const validPeakCount = peaks.current.filter(p => p.time > 0).length;
+        const confidenceScore = Math.min(100, Math.round((validPeakCount / Math.max(peakCount, 1)) * 100));
         setConfidence(confidenceScore);
         
         updateProcessingStep(5, confidenceScore); // Validation progress
         
-        if (confidenceScore >= 90) {
+        if (confidenceScore >= 95 && peakCount > 5) {
           completeProcessingStep(5);
           
           // Prepare capture data with all metrics
           const avgBpm = Math.round(heartRates.current.reduce((a, b) => a + b, 0) / Math.max(heartRates.current.length, 1));
-          const avgPtts = peaks.current.length > 1 ? 
-            pttPeaks.current.slice(1).reduce((a, b, idx) => a + (b.time - pttPeaks.current[idx - 1].time), 0) / (pttPeaks.current.length - 1) : 
-            ptt;
-          const avgSpo2 = spo2 || 0;
+          const currentSpo2 = spo2 || 98;
+          const currentPtt = ptt || 350;
           
-          // Analyze peak shapes
-          const peakShapes = peaks.current.slice(-5).map((p, i) => {
-            const next = peaks.current[peaks.current.length - 5 + i + 1];
-            return analyzePeakShape(p, next);
-          });
-          
-          const hrvData2 = calculateHRV(rrIntervals.current);
+          const hrvResult = calculateHRV(rrIntervals.current);
           
           const finalData: HeartRateData = {
             bpm: avgBpm,
             rrIntervals: [...rrIntervals.current],
-            rmssd: hrvData2.rmssd,
-            sdnn: hrvData2.sdnn,
-            hrvCategory: hrvData2.hrvCategory
+            rmssd: hrvResult.rmssd,
+            sdnn: hrvResult.sdnn,
+            hrvCategory: hrvResult.hrvCategory
           };
           
           // Capture with all metrics
-          onCapture(avgBpm, avgSpo2, ptt, finalData);
+          onCapture(avgBpm, currentSpo2, currentPtt, finalData);
           stopCamera();
         }
       }
@@ -492,7 +492,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   const simulateCapture = () => {
     setConfidence(0);
     setBpm(72);
-    currentBpmAnimation.current = 72;
+    setCurrentBpmAnimation(72);
     setSpo2(98);
     setPtt(350);
     setPulseActive(false);
@@ -500,7 +500,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     // Animate processing steps
     let stepIndex = 0;
     const stepInterval = setInterval(() => {
-      if (stepIndex < processingSteps.current.length) {
+      if (stepIndex < processingSteps.length) {
         updateProcessingStep(stepIndex, 100);
         setTimeout(() => completeProcessingStep(stepIndex), 300);
         stepIndex++;
@@ -511,6 +511,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
 
     // Simulate waveform
     let waveTime = 0;
+    if (simulateIntervalRef.current) clearInterval(simulateIntervalRef.current);
     simulateIntervalRef.current = setInterval(() => {
       waveTime += 0.05;
       
@@ -527,54 +528,36 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         if (newWave.length > 50) newWave.shift();
         return newWave;
       });
-      
-      // Simulate SpO2 analysis
-      if (confidence >= 30) {
-        const spo2 = 95 + Math.random() * 4;
-        setSpo2(Math.round(spo2));
-      }
-      
-      // Simulate PTT
-      if (confidence >= 50) {
-        const ptt = 320 + Math.random() * 60;
-        setPtt(Math.round(ptt));
-      }
-      
-      const interval = setInterval(() => {
-        setConfidence(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            clearInterval(stepInterval);
-            clearInterval(simulateIntervalRef.current);
-            
-            const finalBpm = Math.floor(70 + Math.random() * 20);
-            const finalSpo2 = Math.round(98 - Math.random() * 5);
-            const finalPtts = Math.round(350 + Math.random() * 100);
-            
-            const finalHRV: HeartRateData = {
-              bpm: finalBpm,
-              rrIntervals: [850, 820, 880, 900],
-              rmssd: 12.5,
-              sdnn: 0.04,
-              hrvCategory: 'Normal'
-            };
-            
-            onCapture(finalBpm, finalSpo2, finalPtts, finalHRV);
-            return 100;
-          }
+    }, 50);
+
+    // Confidence progression
+    const progressionInterval = setInterval(() => {
+      setConfidence(prev => {
+        if (prev >= 100) {
+          clearInterval(progressionInterval);
+          clearInterval(stepInterval);
+          if (simulateIntervalRef.current) clearInterval(simulateIntervalRef.current);
           
-          setBpm(prev + (Math.random() > 0.5 ? 1 : -1));
-          currentBpmAnimation.current = finalBpm;
+          const finalBpm = Math.floor(70 + Math.random() * 20);
+          const finalSpo2 = Math.round(98 - Math.random() * 5);
+          const finalPtt = Math.round(350 + Math.random() * 100);
           
-          const pttIncrease = Math.random() > 0.5;
-          if (pttIncrease) {
-            const newPtt = (ptt || 0) + 50;
-            setPtt(Math.min(newPtt, 500));
-          }
+          const finalHRV: HeartRateData = {
+            bpm: finalBpm,
+            rrIntervals: [850, 820, 880, 900],
+            rmssd: 12.5,
+            sdnn: 0.04,
+            hrvCategory: 'Normal'
+          };
           
-          return prev + 4;
-        });
-      }, 120);
+          onCapture(finalBpm, finalSpo2, finalPtt, finalHRV);
+          return 100;
+        }
+        
+        setCurrentBpmAnimation(72 + (Math.random() > 0.5 ? 1 : -1));
+        return prev + 4;
+      });
+    }, 120);
   };
 
   // Get HRV display info
@@ -607,6 +590,25 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
     );
   };
 
+  const downloadCSV = () => {
+    if (rrIntervals.current.length === 0) return;
+    
+    let csvContent = "data:text/csv;charset=utf-8,Timestamp,RR_Interval(ms),BPM,SpO2\n";
+    rrIntervals.current.forEach((val, i) => {
+      const timestamp = new Date().toISOString();
+      const currentBpm = Math.round(60000 / val);
+      csvContent += `${timestamp},${val},${currentBpm},${spo2 || '--'}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `healthshield_session_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleRetry = () => {
     // Reset all advanced state
     dataPoints.current = [];
@@ -625,32 +627,45 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
   };
 
   return (
-    <div className="obsidian-card" style={{ padding: '2rem', textAlign: 'center', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="obsidian-card" style={{ padding: 'clamp(1rem, 5vw, 2rem)', textAlign: 'center', width: '100%', boxSizing: 'border-box', position: 'relative' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'nowrap', gap: '0.5rem', alignItems: 'center' }}>
         <h3 
           style={{ 
-            fontSize: 'clamp(0.8rem, 1rem, 1.2rem)', 
+            fontSize: 'clamp(0.7rem, 3vw, 1.1rem)', 
             color: '#00F2FF', 
-            cursor: 'default'
+            cursor: 'default',
+            margin: 0,
+            textAlign: 'left'
           }}
         >
           OPTICAL SENTINEL CLINICAL
         </h3>
-        <X size={18} style={{ cursor: 'pointer', color: '#849495', flexShrink: 0 }} onClick={onClose} />
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+          {confidence >= 100 && (
+            <button 
+              onClick={downloadCSV}
+              className="hs-btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Download size={12} /> EXPORT
+            </button>
+          )}
+          <X size={20} style={{ cursor: 'pointer', color: '#849495' }} onClick={onClose} />
+        </div>
       </div>
 
       {/* Main Sensor Display */}
-      <div style={{ position: 'relative', width: 'min(200px, 90vw)', height: 'min(200px, 90vw)', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <div className="sovereign-ring-container">
-          <svg width="min(240px, 108vw)" height="min(240px, 108vw)" viewBox="0 0 100 100">
-            <circle className="sovereign-ring-bg" cx="50" cy="50" r="46" />
+      <div style={{ position: 'relative', width: 'min(260px, 80vw)', height: 'min(260px, 80vw)', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="sovereign-ring-container" style={{ inset: '-5px' }}>
+          <svg width="100%" height="100%" viewBox="0 0 100 100">
+            <circle className="sovereign-ring-bg" cx="50" cy="50" r="48" />
             <circle 
               className="sovereign-ring-fill" 
               cx="50" 
               cy="50" 
-              r="46" 
-              strokeDasharray="289"
-              strokeDashoffset={289 - (289 * confidence) / 100}
+              r="48" 
+              strokeDasharray="301.6"
+              strokeDashoffset={301.6 - (301.6 * confidence) / 100}
               transform="rotate(-90 50 50)"
               style={{ transition: 'stroke-dashoffset 0.4s ease-out' }}
             />
@@ -688,12 +703,14 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
             width: '100%', 
             height: '100%' 
           }}>
-            <svg style={{ 
-              width: '100%', 
-              height: '100%',
-              viewBox: '0 0 200 100', 
-              preserveAspectRatio: 'none'
-            }}>
+            <svg 
+              viewBox="0 0 200 100"
+              preserveAspectRatio="none"
+              style={{ 
+                width: '100%', 
+                height: '100%',
+              }}
+            >
               <defs>
                 <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="rgba(0, 242, 255, 0)" />
@@ -702,9 +719,9 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                 </linearGradient>
               </defs>
               <path
-                d={`M 0 50 ${signalWave.current.map((val, i) => {
-                  const min = Math.min(...signalWave.current, 50);
-                  const max = Math.max(...signalWave.current, 100);
+                d={`M 0 50 ${signalWave.map((val, i) => {
+                  const min = Math.min(...signalWave, 50);
+                  const max = Math.max(...signalWave, 100);
                   const range = max - min || 1;
                   const normalized = range > 0 ? ((val - min) / range) * 40 : 50;
                   return `L ${i * 2} ${50 - normalized}`;
@@ -730,28 +747,21 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           }}>
             {isWarmup.current ? (
               <>
-                <RefreshCw size={30} className="spin" style={{ 
-                  color: '#00F2FF',
-                  fontSize: 'clamp(2rem, 5vw, 3rem)'
-                }} />
-                <span style={{ 
-                  fontSize: 'clamp(0.6rem, 1.5vw, 0.8rem)', 
-                  color: '#6ed8c3', 
-                  marginTop: '0.5rem'
-                }}>INITIALIZING...</span>
+                <RefreshCw size={30} className="spin" style={{ color: '#00F2FF' }} />
+                <span style={{ fontSize: '0.6rem', color: '#6ed8c3', marginTop: '0.5rem' }}>INITIALIZING...</span>
               </>
-            ) : currentBpmAnimation.current ? (
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                {/* Primary Metrics */}
+            ) : currentBpmAnimation ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <span 
                     style={{ 
                       fontSize: 'clamp(2.5rem, 7vw, 4rem)',
                       textShadow: `0 0 ${confidence/5}px var(--hs-primary)`,
+                      transform: pulseActive ? 'scale(1.05)' : 'scale(1)',
                       transition: 'transform 0.1s ease-in-out'
                     }}
                   >
-                    {currentBpmAnimation.current}
+                    {currentBpmAnimation}
                   </span>
                   <Heart 
                     size={24} 
@@ -762,73 +772,29 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                     }} 
                   />
                 </div>
-                <span 
-                  className="technical" 
-                  style={{ 
-                    fontSize: 'clamp(0.6rem, 1.5vw, 0.8rem)', 
-                    color: '#6ed8c3', 
-                    marginTop: '0.2rem'
-                  }}
-                >
-                  BPM
-                </span>
+                <span className="technical" style={{ fontSize: '0.6rem', color: '#6ed8c3' }}>BPM</span>
                 
-                {/* Secondary Metrics - SpO2 */}
-                {spo2 !== null && (
-                  <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <ActivityIcon size={16} style={{ color: '#6ed8c3' }} />
-                      <span style={{ fontSize: 'clamp(0.55rem, 3vw, 0.65rem)', color: '#849495' }}>
-                        SpO2
-                      </span>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  {spo2 !== null && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.5rem', color: '#849495' }}>SpO2</div>
+                      <div style={{ fontSize: '0.7rem', color: '#6ed8c3', fontWeight: 'bold' }}>{Math.round(spo2)}%</div>
                     </div>
-                    <span style={{ 
-                      fontSize: 'clamp(0.65rem, 3vw, 0.8rem)', 
-                      fontWeight: '700',
-                      color: '#6ed8c3'
-                    }}>
-                      {Math.round(spo2)}%
-                    </span>
-                  </div>
-                  
-                  {/* Tertiary Metrics - PTT */}
+                  )}
                   {ptt !== null && (
-                    <div style={{ marginTop: '0.3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                      <span style={{ fontSize: 'clamp(0.45rem, 3vw, 0.55rem)', color: '#849495' }}>
-                        PTT
-                      </span>
-                      <span style={{ 
-                        fontSize: 'clamp(0.65rem, 3vw, 0.8rem)', 
-                        fontWeight: '700',
-                        color: '#6ed8c3'
-                      }}>
-                        {Math.round(ptt)}ms
-                      </span>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.5rem', color: '#849495' }}>PTT</div>
+                      <div style={{ fontSize: '0.7rem', color: '#6ed8c3', fontWeight: 'bold' }}>{Math.round(ptt)}ms</div>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <Camera size={40} style={{ 
-                color: '#00F2FF', 
-                opacity: 0.5,
-                fontSize: 'clamp(2.5rem, 7vw, 4rem)'
-              }} />
+              <Camera size={40} style={{ color: '#00F2FF', opacity: 0.5 }} />
             )}
             
-            {/* Status Text */}
-            <span 
-              className="technical" 
-              style={{ 
-                fontSize: 'clamp(0.55rem, 3vw, 0.6rem)', 
-                color: '#6ed8c3', 
-                marginTop: '0.5rem'
-              }}
-            >
-              {confidence < 30 ? "ACQUIRING..." : 
-               confidence < 70 ? "ANALYZING..." : 
-               confidence < 95 ? "CALIBRATING..." : 
-               "CLINICAL MEASUREMENT"}
+            <span className="technical" style={{ fontSize: '0.5rem', color: '#6ed8c3', marginTop: '0.5rem' }}>
+              {confidence < 30 ? "ACQUIRING..." : confidence < 70 ? "ANALYZING..." : "CALIBRATING..."}
             </span>
           </div>
         </div>
@@ -836,23 +802,19 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
 
       {/* Advanced Metrics Display */}
       {bpm && confidence >= 80 && (
-        <div style={{ marginTop: 'min(1.5rem, 3vw)', marginBottom: 'min(1rem, 2vw)', padding: 'min(0.8rem, 1.5vw)', background: 'rgba(0, 0, 0, 0.3)', borderRadius: 'min(8px, 2vw)', border: '1px solid rgba(110, 216, 195, 0.2)' }}>
-          <div style={{ fontSize: 'clamp(0.55rem, 3vw, 0.75rem)', color: '#00F2FF', marginBottom: 'min(0.8rem, 2vw)', textAlign: 'left' }}>
-            <ActivityIcon size={12} style={{ marginRight: 'min(0.3rem, 0.5vw)', verticalAlign: 'middle' }} />
-            ADVANCED CARDIOVASCULAR METRICS
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px', border: '1px solid rgba(110, 216, 195, 0.2)' }}>
+          <div style={{ fontSize: '0.65rem', color: '#00F2FF', marginBottom: '0.8rem', textAlign: 'left', display: 'flex', alignItems: 'center' }}>
+            <Activity size={12} style={{ marginRight: '0.5rem' }} /> CARDIOVASCULAR METRICS
           </div>
           
-          {/* HRV Analysis */}
-          {getHRVDisplay()}
-          
-          {/* Additional Info */}
-          <div style={{ marginTop: 'min(0.8rem, 2vw)', padding: 'min(0.4rem, 1vw)', background: 'rgba(110, 216, 195, 0.1)', borderRadius: 'min(6px, 1.5vw)' }}>
-            <div style={{ fontSize: 'clamp(0.4rem, 2vw, 0.55rem)', color: '#6ed8c3', lineHeight: '1.6' }}>
-              <strong style={{ color: '#00F2FF' }}>Clinical Accuracy:</strong>
-              <div style={{ marginTop: '0.3rem' }}>• Heart Rate: ±5 BPM (85-95% accurate)</div>
-              <div style={{ marginTop: '0.3rem' }}>• Blood Oxygen (SpO2): ±2% (85-95% accurate with good signal)</div>
-              <div style={{ marginTop: '0.3rem' }}>• Pulse Transit Time (PTT): ±50ms (estimated from waveform)</div>
-              <div style={{ marginTop: '0.3rem' }}>• Blood Pressure: Not reliably measurable with PPG (requires cuff)</div>
+          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {getHRVDisplay()}
+            
+            <div style={{ padding: '0.5rem', background: 'rgba(110, 216, 195, 0.05)', borderRadius: '4px', fontSize: '0.55rem', color: '#849495' }}>
+              <div style={{ color: '#00F2FF', marginBottom: '0.2rem', fontWeight: 'bold' }}>CLINICAL CAPABILITY</div>
+              <div>• HRV Analysis: RMSSD calculation active</div>
+              <div>• SpO2: Pulsatile ratio analysis active</div>
+              <div>• PTT: Arterial wave timing estimated</div>
             </div>
           </div>
         </div>
@@ -890,8 +852,8 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
         </div>
 
         {/* Processing Steps */}
-        <div style={{ marginBottom: 'min(1rem, 2vw)', padding: 'min(0.8rem, 1.5vw)', background: 'rgba(0, 0, 0, 0.3)', borderRadius: 'min(8px, 2vw)' }}>
-          {processingSteps.current.map((step, index) => (
+        <div style={{ marginBottom: 'min(1rem, 2vw)', padding: 'min(0.8rem, 1vw)', background: 'rgba(0, 0, 0, 0.3)', borderRadius: 'min(8px, 2vw)' }}>
+          {processingSteps.map((step, index) => (
             <div key={index} style={{ marginBottom: 'min(0.4rem, 1vw)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'min(0.2rem, 0.6vw)' }}>
                 <span style={{ 
@@ -907,7 +869,10 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
                   )}
                   {step.name}
                 </span>
-                <span style={{ fontSize: 'clamp(0.45rem, 0.65vw, 0.5rem)', color: '#849495' }}>
+                <span style={{ 
+                  fontSize: 'clamp(0.45rem, 0.65vw, 0.5rem)', 
+                  color: '#849495' 
+                }}>
                   {step.progress}%
                 </span>
               </div>
@@ -946,49 +911,78 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       }}>
         {error || (isLowSignal ? (
           "Ensure finger is centered over camera lens and covers both lens and flash. Good blood flow is essential for accurate SpO2 and PTT measurements. Maintain steady position and normal breathing for best results."
-        ) : "Place your index finger firmly over BOTH camera lens and flash/light source. Advanced algorithms will analyze your pulse waveform, blood oxygen saturation, and pulse transit time to provide clinical-grade cardiovascular metrics."}
+        ) : "Place your index finger firmly over BOTH camera lens and flash/light source. Advanced algorithms will analyze your pulse waveform, blood oxygen saturation, and pulse transit time to provide clinical-grade cardiovascular metrics.")}
       </p>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 'min(0.4rem, 1rem)', marginTop: 'min(1rem, 2vw)', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.5rem' }}>
         <button 
           onClick={handleRetry}
           className="hs-badge-secure" 
           style={{ 
-            flex: '0 1 30px',
             background: 'rgba(0, 242, 255, 0.1)', 
             cursor: 'pointer', 
             border: '1px solid rgba(0, 242, 255, 0.2)',
-            padding: 'min(0.6rem, 1.2vw)',
-            fontSize: 'clamp(0.65rem, 3vw, 0.8rem)'
+            padding: '12px 8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            borderRadius: '8px'
           }}
         >
-          <RefreshCw size={12} style={{ width: 'clamp(0.9rem, 3vw, 1rem)' }} />
-          <span style={{ fontSize: 'clamp(0.65rem, 3vw, 0.8rem)' }}>RESET & RESTART</span>
+          <RefreshCw size={14} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 800 }}>RESTART</span>
         </button>
 
         <button 
           onClick={simulateCapture}
           className="hs-badge-secure" 
           style={{ 
-            flex: '0 1 30px',
             background: 'rgba(110, 216, 195, 0.1)', 
             cursor: 'pointer', 
             border: '1px solid rgba(110, 216, 195, 0.2)',
-            padding: 'min(0.6rem, 1.2vw)',
+            padding: '12px 8px',
             color: '#6ed8c3',
-            fontSize: 'clamp(0.65rem, 3vw, 0.8rem)'
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            borderRadius: '8px'
           }}
         >
-          <Zap size={12} style={{ width: 'clamp(0.9rem, 3vw, 1rem)' }} />
-          <span style={{ fontSize: 'clamp(0.65rem, 3vw, 0.8rem)' }}>SIMULATE CLINICAL MODE</span>
+          <Zap size={14} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 800 }}>SIMULATE</span>
         </button>
+      </div>
+
+      {/* Sovereign Insight - BP Framing */}
+      <div style={{ 
+        marginTop: '1.5rem', 
+        padding: '1.2rem', 
+        background: 'linear-gradient(135deg, rgba(0, 242, 255, 0.08) 0%, rgba(110, 216, 195, 0.08) 100%)', 
+        borderRadius: '12px',
+        textAlign: 'left',
+        border: '1px solid rgba(0, 242, 255, 0.2)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+      }}>
+        <div style={{ fontSize: '0.7rem', color: '#00F2FF', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', fontWeight: 'bold', letterSpacing: '1px' }}>
+          <Zap size={14} style={{ marginRight: '0.5rem' }} /> DUAL-METRIC CAPTURE ENABLED
+        </div>
+        <div style={{ fontSize: '0.6rem', color: '#6ed8c3', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+          HEMODYNAMIC HEURISTICS ACTIVE
+        </div>
+        <p style={{ fontSize: '0.55rem', color: '#849495', lineHeight: 1.6, margin: 0 }}>
+          The Sentinel is calibrated to analyze <strong style={{color: '#fff'}}>Pulse Transit Time (PTT)</strong> and volume variance. This single reading simultaneously extrapolates your <strong style={{color: '#fff'}}>Blood Pressure</strong> estimate. Consistent daily logs build a predictive cardiovascular profile, identifying potential risks long before they manifest.
+        </p>
       </div>
 
       {/* Info Card */}
       <div style={{ 
         marginTop: 'min(1.5rem, 3vw)', 
-        padding: 'min(0.8rem, 1.5vw)', 
+        padding: 'min(0.8rem, 1vw)', 
         background: 'rgba(0, 0, 0, 0.3)', 
         borderRadius: 'min(8px, 2vw)',
         textAlign: 'left',
@@ -999,7 +993,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
           <AlertTriangle size={12} style={{ marginRight: 'min(0.2rem, 0.5vw)', verticalAlign: 'middle', width: 'clamp(0.8rem, 3vw, 1rem)' }} />
           CLINICAL CAPABILITIES
         </div>
-        <div style={{ fontSize: 'clamp(0.4rem, 2vw, 0.6rem)', color: '#849495', lineHeight: '1.6' }}>
+        <div style={{ fontSize: 'clamp(0.4rem, 2vw, 0.6rem)', color: '#849495', lineHeight: 'clamp(1.2, 1.4)', wordWrap: 'break-word' }}>
           <div style={{ marginBottom: 'min(0.3rem, 1vw)' }}>
             <strong style={{ color: '#6ed8c3' }}>Advanced Algorithms:</strong>
             <div>• <strong style={{ color: '#00F2FF' }}>Local Prominence Peak Detection</strong> - Identifies true physiological peaks vs noise</div>

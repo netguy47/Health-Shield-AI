@@ -8,6 +8,8 @@ interface MonetizationMatrixProps {
   handleStartTrial: () => void;
   handleInstall: () => void;
   deferredPrompt: any;
+  isIOS: boolean;
+  isStandalone: boolean;
 }
 
 const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({ 
@@ -16,7 +18,9 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
   handlePurchase, 
   handleStartTrial,
   handleInstall, 
-  deferredPrompt 
+  deferredPrompt,
+  isIOS,
+  isStandalone
 }) => {
   const tiers = [
     {
@@ -89,7 +93,7 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
       </section>
 
       {/* Pricing Grid */}
-      <div className="col-span-12 hs-grid" style={{ gap: '3rem', alignItems: 'stretch', marginTop: '2rem' }}>
+      <div className="col-span-12 hs-grid" style={{ gap: '3.5rem', alignItems: 'stretch', marginTop: '3rem' }}>
         {tiers.map((tier) => (
           <div 
             key={tier.id}
@@ -101,7 +105,9 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
               background: tier.highlight ? 'rgba(0, 242, 255, 0.05)' : 'var(--hs-bg-card)',
               transform: tier.highlight ? 'scale(1.02)' : 'scale(1)',
               zIndex: tier.highlight ? 10 : 1,
-              border: tier.highlight ? '1px solid var(--hs-primary)' : '1px solid rgba(255,255,255,0.05)'
+              border: tier.highlight ? '1px solid var(--hs-primary)' : '1px solid rgba(255,255,255,0.05)',
+              overflow: 'visible', /* Fix for clipped tags */
+              marginTop: '1.5rem'  /* Space for tags to breathe */
             }}
           >
             {tier.tag && (
@@ -235,11 +241,34 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
              {deferredPrompt && (
                 <button 
                   onClick={handleInstall}
-                  className="hs-badge-secure" 
+                  className="hs-btn-primary" 
                   style={{ marginTop: 'auto', background: 'white', color: 'black', border: 'none', padding: '12px' }}
                 >
+                  <Download size={14} />
                   INSTALL OFFLINE NODE
                 </button>
+             )}
+             {isIOS && !isStandalone && (
+                <div 
+                  className="hs-badge-secure" 
+                  style={{ 
+                    marginTop: 'auto', 
+                    background: 'rgba(110, 216, 195, 0.1)', 
+                    color: 'var(--hs-primary)', 
+                    padding: '16px',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Download size={14} />
+                    <span className="technical" style={{ fontSize: '0.7rem' }}>REGISTER NODE (IOS)</span>
+                  </div>
+                  <p style={{ fontSize: '0.6rem', opacity: 0.8, lineHeight: 1.4 }}>
+                    Tap the <strong>Share</strong> button in Safari, then select <strong>'Add to Home Screen'</strong> to initialize the offline sovereign agent.
+                  </p>
+                </div>
              )}
           </div>
         </div>
