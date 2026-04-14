@@ -7,6 +7,7 @@ interface MonetizationMatrixProps {
   handlePurchase: (priceId: string) => void;
   handleStartTrial: () => void;
   handleInstall: () => void;
+  onShowLicense: () => void;
   deferredPrompt: any;
   isIOS: boolean;
   isStandalone: boolean;
@@ -18,6 +19,7 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
   handlePurchase, 
   handleStartTrial,
   handleInstall, 
+  onShowLicense,
   deferredPrompt,
   isIOS,
   isStandalone
@@ -200,6 +202,26 @@ const MonetizationMatrix: React.FC<MonetizationMatrixProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Restore License Button */}
+      {!isPremium && (
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <button 
+            onClick={onShowLicense}
+            className="technical"
+            style={{ 
+              background: 'transparent', 
+              color: '#849495', 
+              border: 'none', 
+              fontSize: '0.7rem', 
+              textDecoration: 'underline', 
+              cursor: 'pointer' 
+            }}
+          >
+            Already Purchased? Restore Sovereign License
+          </button>
+        </div>
+      )}
 
       {/* Trust & Comparison Section */}
       <section className="obsidian-card col-span-12" style={{ marginTop: '2rem', background: 'rgba(0,0,0,0.3)' }}>

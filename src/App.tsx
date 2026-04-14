@@ -24,12 +24,13 @@ import OracleHUD from './presentation/components/OracleHUD';
 import ScoreGauge from './components/ScoreGauge';
 import ConsultantHub from './components/ConsultantHub';
 import StepIndicator from './presentation/components/StepIndicator';
+import LicenseManager from './components/LicenseManager';
 import { maskLogData, unmaskLogData } from './lib/encryption';
 import { calculateNeuralCardioScore } from './lib/oracle_engine';
 import { bufferLogOffline, getBufferedLogs, clearSyncBuffer } from './lib/offline_buffer';
 import { requestSovereignNotifications, triggerScheduledReminders } from './lib/notifications';
 
-const SOVEREIGN_VERSION = "v1.2.7.3";
+const SOVEREIGN_VERSION = "v1.2.7.4";
 
 const App: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [trialTimeRemaining, setTrialTimeRemaining] = useState<number | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showSensor, setShowSensor] = useState(false);
+  const [showLicenseManager, setShowLicenseManager] = useState(false);
   const [showDevMenu, setShowDevMenu] = useState(false);
   
   const isIOS = useMemo(() => {
@@ -66,8 +68,9 @@ const App: React.FC = () => {
       const checkoutSuccess = params.get('success') === 'true';
       
       if (checkoutSuccess) {
-        setSubscriptionTier('pro');
-        localStorage.setItem('healthshield_protocol_level', 'pro');
+        // Do NOT automatically grant access. Prompt for License Key.
+        alert("Sovereign Purchase Detected. Please check your email for your License Key to activate the clinical node.");
+        setShowLicenseManager(true);
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (savedProtocol) {
         setSubscriptionTier(savedProtocol as any);
@@ -225,6 +228,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLicenseSuccess = (tier: string) => {
+    setSubscriptionTier(tier as any);
+    setShowLicenseManager(false);
+    alert(`Sovereign Node Successfully Authenticated: ${tier.toUpperCase()} Access Active.`);
+  };
+
   return (
     <div className="hs-app-container">
       <SovereignHeader 
@@ -306,6 +315,7 @@ const App: React.FC = () => {
                 deferredPrompt={deferredPrompt}
                 isIOS={isIOS}
                 isStandalone={isStandalone}
+                onShowLicense={() => setShowLicenseManager(true)}
               />
             </section>
 
@@ -342,6 +352,7 @@ const App: React.FC = () => {
               deferredPrompt={deferredPrompt}
               isIOS={isIOS}
               isStandalone={isStandalone}
+              onShowLicense={() => setShowLicenseManager(true)}
             />
           </div>
         )}
@@ -355,6 +366,15 @@ const App: React.FC = () => {
           <OpticalSensor 
             onCapture={handleCapture}
             onClose={() => setShowSensor(false)}
+          />
+        </div>
+      )}
+
+      {showLicenseManager && (
+        <div className="modal-overlay">
+          <LicenseManager 
+            onSuccess={handleLicenseSuccess}
+            onClose={() => setShowLicenseManager(false)}
           />
         </div>
       )}

@@ -12,11 +12,14 @@
     "@mlc-ai/web-llm": "^0.2.82",
     "@radix-ui/react-dialog": "^1.1.15",
     "@types/crypto-js": "^4.2.2",
+    "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
     "firebase": "^12.11.0",
+    "firebase-admin": "^13.8.0",
     "lucide-react": "^0.574.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "resend": "^6.11.0",
     "stripe": "^22.0.1"
   },
   "devDependencies": {

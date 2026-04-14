@@ -15,6 +15,7 @@ export default async function handler(req, res) {
 
       // Create Checkout Sessions from body params.
       const session = await stripe.checkout.sessions.create({
+        customer_email: undefined, // Let user enter email in Stripe Checkout if not provided
         line_items: [
           {
             price_data: {
@@ -29,8 +30,12 @@ export default async function handler(req, res) {
           },
         ],
         mode: selectedPlan.mode,
-        success_url: `${req.headers.origin}/?success=true`,
+        success_url: `${req.headers.origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/?canceled=true`,
+        metadata: {
+          app_version: 'v1',
+          plan_tier: plan || 'lifetime'
+        }
       });
       res.status(200).json({ url: session.url });
     } catch (err) {
