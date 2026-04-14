@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, Database, MessageSquare, Cpu, Shield } from 'lucide-react';
-import { View } from '@/lib/types';
+
+export type View = 'HUB' | 'DATA' | 'ENGINE' | 'SAFE' | 'CONSULTANT' | 'ORACLE';
 
 interface NavigationDockProps {
   activeView: string;

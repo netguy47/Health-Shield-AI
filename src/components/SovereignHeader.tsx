@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Activity, Lock, Plus } from 'lucide-react';
 
 interface SovereignHeaderProps {
@@ -15,6 +15,16 @@ const SovereignHeader: React.FC<SovereignHeaderProps> = ({
   onShowSensor 
 }) => {
   const isTrial = trialDaysRemaining !== null;
+  const [devClicks, setDevClicks] = useState(0);
+
+  const handleDevUnlock = () => {
+    const newCount = devClicks + 1;
+    setDevClicks(newCount);
+    if (newCount >= 5) {
+      onShowDevMenu();
+      setDevClicks(0);
+    }
+  };
   
   return (
     <header className="hs-header">

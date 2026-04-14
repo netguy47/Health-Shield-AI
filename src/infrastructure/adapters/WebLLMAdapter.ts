@@ -10,7 +10,9 @@ export type LoadingCallback = (progress: number, label: string) => void;
 export class WebLLMAdapter {
   private static instance: WebLLMAdapter;
   private engine: webllm.MLCEngineInterface | null = null;
-  private modelId = "gemma-2-2b-it-q4f16_1-MLC"; // Using a stable compatible model for now, can be updated to Gemma 3 1B
+  private primaryModelId = "gemma-2-2b-it-q4f16_1-MLC"; 
+  private fallbackModelId = "Llama-3.2-1B-Instruct-q4f16_1-MLC"; // Lighter model for mobile/constrained nodes
+  private activeModelId = "";
   
   private constructor() {}
 
@@ -27,13 +29,26 @@ export class WebLLMAdapter {
   async initialize(onProgress?: LoadingCallback): Promise<void> {
     if (this.engine) return;
 
-    this.engine = await webllm.CreateMLCEngine(this.modelId, {
-      initProgressCallback: (report: webllm.InitProgressReport) => {
-        if (onProgress) {
-          onProgress(report.progress, report.text);
+    try {
+      this.activeModelId = this.primaryModelId;
+      this.engine = await webllm.CreateMLCEngine(this.primaryModelId, {
+        initProgressCallback: (report: webllm.InitProgressReport) => {
+          if (onProgress) {
+            onProgress(report.progress, report.text);
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.warn(`[WebLLM] Primary model ${this.primaryModelId} failed. Adapting to lighter node constraints...`, error);
+      this.activeModelId = this.fallbackModelId;
+      this.engine = await webllm.CreateMLCEngine(this.fallbackModelId, {
+        initProgressCallback: (report: webllm.InitProgressReport) => {
+          if (onProgress) {
+            onProgress(report.progress, `[Adaptive Mode] ${report.text}`);
+          }
+        }
+      });
+    }
   }
 
   /**

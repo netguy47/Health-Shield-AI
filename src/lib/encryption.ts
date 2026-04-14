@@ -1,6 +1,17 @@
 import CryptoJS from 'crypto-js';
 
-const MASTER_KEY = import.meta.env.VITE_SOVEREIGN_SECRET || 'SOVEREIGN_DEFAULT_0X1';
+// Generate or retrieve a device-specific Sovereign Key
+const getSovereignKey = (): string => {
+  let key = localStorage.getItem('sovereign_node_key');
+  if (!key) {
+    // Generate 256-bit entropy for local device encryption
+    key = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
+    localStorage.setItem('sovereign_node_key', key);
+  }
+  return key;
+};
+
+const MASTER_KEY = getSovereignKey();
 
 /**
  * Encrypts a string using AES-256
@@ -12,7 +23,7 @@ export const encryptSovereignData = (data: string): string => {
     return CryptoJS.AES.encrypt(data, MASTER_KEY).toString();
   } catch (error) {
     console.error('[Sovereign Encryption] Critical Failure:', error);
-    return data; // Fallback to plaintext in emergency (Fail-open for medical logs)
+    throw new Error('Encryption failed. Sovereignty lock enforced.'); // Fail-closed
   }
 };
 
@@ -25,10 +36,11 @@ export const decryptSovereignData = (ciphertext: string): string => {
   try {
     const bytes = CryptoJS.AES.decrypt(ciphertext, MASTER_KEY);
     const originalText = bytes.toString(CryptoJS.enc.Utf8);
-    return originalText || ciphertext;
+    if (!originalText) throw new Error('Malformed payload');
+    return originalText;
   } catch (error) {
-    console.warn('[Sovereign Decryption] Decryption failed, treating as plaintext or corrupted.');
-    return ciphertext;
+    console.warn('[Sovereign Decryption] Decryption failed.');
+    return 'ENCRYPTED_OR_CORRUPT'; // Do not return raw ciphertext as valid data
   }
 };
 

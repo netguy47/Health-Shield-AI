@@ -1013,6 +1013,9 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
             <div>• All measurements are for demonstration purposes. For clinical accuracy, use FDA-approved pulse oximeters.</div>
           </div>
         </div>
+        <div style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '0.45rem', color: '#FF5050' }}>
+          <strong>MEDICAL DISCLAIMER:</strong> HealthShield AI is NOT a clinical diagnostic device. Blood Pressure values are synthetic heuristic extrapolations derived from Pulse Transit Time (PTT) and Heart Rate variability, NOT direct mechanical measurements. Always consult a physician for medical decisions.
+        </div>
       </div>
     </div>
   );
