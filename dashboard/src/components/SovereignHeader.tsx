@@ -19,10 +19,14 @@ const SovereignHeader: React.FC<SovereignHeaderProps> = ({
   return (
     <header className="hs-header">
       <div className="hs-logo-container">
-        <Activity className="nav-icon" style={{ color: 'var(--hs-primary)' }} />
-        <h1 className="technical" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.1em' }}>
+        <Activity className="nav-icon mobile-only" style={{ color: 'var(--hs-primary)' }} />
+        <h1 className="technical mobile-only" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.1em' }}>
           HEALTHSHIELD <span style={{ color: 'var(--hs-primary)' }}>AI</span>
         </h1>
+        <div className="pc-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--hs-primary)', boxShadow: '0 0 10px var(--hs-primary)', animation: 'pulse-biometric 2s infinite' }}></div>
+          <span className="technical" style={{ fontSize: '0.7rem', color: 'var(--hs-primary)', letterSpacing: '0.2em' }}>NODE_ACTIVE</span>
+        </div>
       </div>
       
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

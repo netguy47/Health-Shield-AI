@@ -23,6 +23,26 @@
   --hs-shadow-premium: 0 0 40px rgba(110, 216, 195, 0.15), inset 0 0 20px rgba(110, 216, 195, 0.05);
 }
 
+.mobile-only {
+  display: flex !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+.pc-only {
+  display: none !important;
+}
+
+@media (min-width: 1200px) {
+  .pc-only {
+    display: flex !important;
+  }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -62,14 +82,45 @@ h1, h2, h3, .technical {
   letter-spacing: -0.02em;
 }
 
-/* --- Layout Engine --- */
+/* --- Layout Engine (Sovereign 3-Pane Architecture) --- */
 
 .hs-app-container {
-  max-width: var(--hs-container-max);
-  margin: 0 auto;
-  padding: 1rem; /* Slightly reduced for mobile */
-  padding-top: max(1.5rem, env(safe-area-inset-top)); /* Notch Support */
-  padding-bottom: max(14rem, env(safe-area-inset-bottom)); /* PWA Banner + Home Bar + Extra Clearance */
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-areas: "main";
+  grid-template-columns: 1fr;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Tablet Layout (Sidebar + Main) */
+@media (min-width: 768px) {
+  .hs-app-container {
+    grid-template-areas: "sidebar main";
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+/* Desktop Command Center (Sidebar + Stream + Detail) */
+@media (min-width: 1200px) {
+  .hs-app-container {
+    grid-template-areas: "sidebar stream detail";
+    grid-template-columns: 280px 420px 1fr;
+  }
+}
+
+.hs-sidebar-area { grid-area: sidebar; }
+.hs-stream-area { grid-area: stream; display: none; }
+.hs-main-area { grid-area: main; padding: 1.5rem; }
+.hs-detail-area { grid-area: detail; display: none; }
+
+@media (min-width: 1200px) {
+  .hs-stream-area { display: block; border-right: 1px solid rgba(110, 216, 195, 0.08); background: rgba(5, 5, 5, 0.3); }
+  .hs-detail-area { display: block; padding: 2rem; overflow-y: auto; }
+  .hs-main-area { display: none; } /* Main is replaced by Stream + Detail on Desktop */
 }
 
 .hs-grid {
@@ -96,13 +147,18 @@ h1, h2, h3, .technical {
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  box-shadow: inset 0 0 40px rgba(110, 216, 195, 0.01);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    inset 0 0 40px rgba(110, 216, 195, 0.01);
 }
 
 .obsidian-card:hover {
-  border-color: rgba(110, 216, 195, 0.4);
-  box-shadow: var(--hs-shadow-hologram);
+  border-color: rgba(110, 216, 195, 0.3);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(110, 216, 195, 0.1);
+  transform: translateY(-2px);
 }
 
 .obsidian-card::before {

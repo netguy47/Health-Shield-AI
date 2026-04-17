@@ -338,7 +338,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       const window = dataPoints.current.slice(-windowSize);
       const avg = window.reduce((a, b) => a + b, 0) / window.length;
       
-      const threshold = avg * 1.01; // 1% above moving average
+      const threshold = avg * 1.005; // Reduced from 1% to 0.5% for higher sensitivity
       
       // Find local maxima (potential peaks)
       const localMaxima: number[] = [];
@@ -350,7 +350,7 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       
       // Check each local maximum against threshold
       for (const potentialPeak of localMaxima) {
-        if (potentialPeak > avg * 1.01 && potentialPeak > threshold) {
+        if (potentialPeak > avg * 1.005 && potentialPeak > threshold) {
           const now = Date.now();
           const diff = now - lastPeakTime.current;
 
@@ -422,8 +422,9 @@ const OpticalSensor: React.FC<OpticalSensorProps> = ({ onCapture, onClose }) => 
       }
 
       // Signal Quality Check
-      const isRedDominant = avgR > avgG * 1.1 && avgR > avgB * 1.1;
-      const hasMinimumIntensity = avgR > 30;
+      // RELAXED THRESHOLDS: More forgiving red-dominance and lower entry intensity
+      const isRedDominant = avgR > avgG * 1.05; 
+      const hasMinimumIntensity = avgR > 15;
       const redRatio = calculateRedRatio(avgR, avgG);
       
       if (!hasMinimumIntensity || !isRedDominant) {

@@ -9,7 +9,7 @@ interface NavigationDockProps {
 
 const NavigationDock: React.FC<NavigationDockProps> = ({ activeView, setActiveView, isPremium }) => {
   return (
-    <nav className="hs-dock-fixed">
+    <nav className="hs-dock-fixed mobile-only">
       <div className="hs-dock">
         <button onClick={() => setActiveView('HUB')} className={`nav-item ${activeView === 'HUB' ? 'active' : ''}`}>
           <Activity className="nav-icon" />
@@ -19,10 +19,6 @@ const NavigationDock: React.FC<NavigationDockProps> = ({ activeView, setActiveVi
           <Database className="nav-icon" />
           <span>DATA</span>
         </button>
-        <button onClick={() => setActiveView('CONSULTANT')} className={`nav-item ${activeView === 'CONSULTANT' ? 'active' : ''}`}>
-          <MessageSquare className="nav-icon" />
-          <span>ADVISOR</span>
-        </button>
         <button 
           onClick={() => isPremium ? setActiveView('ORACLE') : setActiveView('SAFE')} 
           className={`nav-item ${activeView === 'ORACLE' ? 'active' : ''}`}
@@ -30,9 +26,13 @@ const NavigationDock: React.FC<NavigationDockProps> = ({ activeView, setActiveVi
           <Cpu className="nav-icon" />
           <span>ORACLE</span>
         </button>
+        <button onClick={() => setActiveView('CONSULTANT')} className={`nav-item ${activeView === 'CONSULTANT' ? 'active' : ''}`}>
+          <MessageSquare className="nav-icon" />
+          <span>ADVISOR</span>
+        </button>
         <button onClick={() => setActiveView('SAFE')} className={`nav-item ${activeView === 'SAFE' ? 'active' : ''}`}>
           <Shield className="nav-icon" />
-          <span>SAFE</span>
+          <span>VAULT</span>
         </button>
       </div>
     </nav>
